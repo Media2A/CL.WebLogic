@@ -312,6 +312,30 @@ code,
     padding-left: 0.9rem;
 }
 
+.demo-user-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.demo-user-card {
+    border-radius: 22px;
+    border: 1px solid var(--site-border);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1rem;
+}
+
+.demo-user-title {
+    margin: 0 0 0.45rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.demo-user-meta {
+    color: var(--site-muted);
+    font-size: 0.92rem;
+}
+
 .badge-soft {
     background: rgba(240, 179, 93, 0.14);
     color: #f9dca9;
@@ -327,6 +351,10 @@ code,
 @media (max-width: 991.98px) {
     .metric-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .demo-user-grid {
+        grid-template-columns: 1fr;
     }
 }
 

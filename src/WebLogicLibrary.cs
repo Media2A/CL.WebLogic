@@ -27,6 +27,7 @@ public sealed class WebLogicLibrary : ILibrary
 
     private MemoryCache? _cache;
     private IWebAuthResolver? _authResolver;
+    public IWebIdentityStore? IdentityStore { get; private set; }
 
     public WebRouteRegistry Routes { get; } = new();
     public WebLogicRegistrationApi Registration { get; }
@@ -63,6 +64,8 @@ public sealed class WebLogicLibrary : ILibrary
             await mySqlStore.InitializeAsync().ConfigureAwait(false);
             identityStore = mySqlStore;
         }
+
+        IdentityStore = identityStore;
 
         var themeManager = new ThemeManager(context, config);
         var authResolver = _authResolver is null || _authResolver is DefaultWebAuthResolver
@@ -105,6 +108,7 @@ public sealed class WebLogicLibrary : ILibrary
         RealtimeBridge?.Dispose();
         RealtimeBridge = null;
         Runtime = null;
+        IdentityStore = null;
     }
 
     public Task<HealthStatus> HealthCheckAsync()
@@ -122,6 +126,7 @@ public sealed class WebLogicLibrary : ILibrary
         _cache = null;
         RealtimeBridge?.Dispose();
         RealtimeBridge = null;
+        IdentityStore = null;
     }
 
     public void UseAuthResolver(IWebAuthResolver authResolver)

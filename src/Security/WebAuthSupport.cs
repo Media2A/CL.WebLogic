@@ -15,6 +15,24 @@ public interface IWebIdentityStore
     Task<WebIdentityProfile?> GetIdentityAsync(string userId, CancellationToken cancellationToken = default);
 }
 
+public interface IWebCredentialValidator
+{
+    Task<WebIdentityProfile?> ValidateCredentialsAsync(
+        string userId,
+        string password,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class WebIdentitySeed
+{
+    public required string UserId { get; init; }
+    public string DisplayName { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public required string Password { get; init; }
+    public IReadOnlyCollection<string> AccessGroups { get; init; } = [];
+    public bool IsActive { get; init; } = true;
+}
+
 public sealed class WebIdentityProfile
 {
     public required string UserId { get; init; }

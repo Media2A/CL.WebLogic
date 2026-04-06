@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Test Page</title>
+    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+    <div class="site-shell">
+        <nav class="navbar navbar-expand-lg navbar-dark px-3 py-3 site-navbar">
+            <div class="container-fluid px-0">
+                <a class="navbar-brand text-white text-decoration-none" href="/">
+                    <div class="brand-mark">
+                        <span class="brand-badge">CL</span>
+                        <div>
+                            <p class="brand-name">CL.WebLogic Starter</p>
+                            <p class="brand-subtitle">Admin-only RBAC page</p>
+                        </div>
+                    </div>
+                </a>
+                <div class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                    <a class="nav-link text-white-50" href="/rbac">RBAC hub</a>
+                    <a class="nav-link text-white-50" href="/rbac/editor">Editor page</a>
+                    <a class="nav-link text-white-50" href="/logout">Logout</a>
+                </div>
+            </div>
+        </nav>
+
+        <section class="hero-panel">
+            <p class="eyebrow">Admin access granted</p>
+            <h1 class="hero-title">Admin page</h1>
+            <p class="hero-copy">Only requests carrying the <code>admin</code> access group can render this page. Everyone else should be stopped by WebLogic before the template is served.</p>
+            <div class="hero-actions">
+                <a class="btn btn-warning fw-semibold" href="/rbac">Back to RBAC hub</a>
+                <a class="btn btn-outline-light" href="/api/plugins/secure">Try secure API</a>
+            </div>
+        </section>
+
+        <section class="section-wrap">
+            <div class="demo-panel">
+                <p class="section-title">Verified identity</p>
+                <div class="mt-3">
+                    <p class="mb-2">Display name: <code>{{display_name}}</code></p>
+                    <p class="mb-2">User ID: <code>{{user_id}}</code></p>
+                    <p class="mb-0">Groups: <code>{{access_groups}}</code></p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
+            <span>If a non-admin can see this page, the RBAC configuration is wrong.</span>
+            <span data-current-year></span>
+        </footer>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
+    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="/assets/site.js"></script>
+</body>
+</html>

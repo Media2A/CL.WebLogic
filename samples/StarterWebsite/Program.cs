@@ -128,25 +128,31 @@ static bool EnsureSampleDatabaseConfigs()
     var mySqlConfigPath = Path.Combine(mySqlDir, "config.mysql.json");
     var mySqlConfig = new
     {
-        enabled = true,
-        host,
-        port = ParseInt(Environment.GetEnvironmentVariable("STARTER_MYSQL_PORT"), 3306),
-        database,
-        username,
-        password = password ?? string.Empty,
-        enablePooling = true,
-        minPoolSize = 1,
-        maxPoolSize = 20,
-        connectionLifetime = 300,
-        connectionTimeout = 30,
-        commandTimeout = 30,
-        enableSsl = ParseBool(Environment.GetEnvironmentVariable("STARTER_MYSQL_SSL"), false),
-        allowPublicKeyRetrieval = ParseBool(Environment.GetEnvironmentVariable("STARTER_MYSQL_ALLOW_PUBLIC_KEY_RETRIEVAL"), true),
-        characterSet = "utf8mb4",
-        collation = "utf8mb4_unicode_ci",
-        allowDestructiveSync = false,
-        backupDirectory = (string?)null,
-        slowQueryThresholdMs = 1000
+        databases = new Dictionary<string, object?>
+        {
+            ["Default"] = new
+            {
+                enabled = true,
+                host,
+                port = ParseInt(Environment.GetEnvironmentVariable("STARTER_MYSQL_PORT"), 3306),
+                database,
+                username,
+                password = password ?? string.Empty,
+                enablePooling = true,
+                minPoolSize = 1,
+                maxPoolSize = 20,
+                connectionLifetime = 300,
+                connectionTimeout = 30,
+                commandTimeout = 30,
+                enableSsl = ParseBool(Environment.GetEnvironmentVariable("STARTER_MYSQL_SSL"), false),
+                allowPublicKeyRetrieval = ParseBool(Environment.GetEnvironmentVariable("STARTER_MYSQL_ALLOW_PUBLIC_KEY_RETRIEVAL"), true),
+                characterSet = "utf8mb4",
+                collation = "utf8mb4_unicode_ci",
+                allowDestructiveSync = false,
+                backupDirectory = (string?)null,
+                slowQueryThresholdMs = 1000
+            }
+        }
     };
 
     var webLogicConfigPath = Path.Combine(webLogicDir, "config.weblogic.json");
