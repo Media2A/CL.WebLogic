@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Not Found</title>
+    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+    <div class="site-shell">
+        <nav class="navbar navbar-expand-lg navbar-dark px-3 py-3 site-navbar">
+            <div class="container-fluid px-0">
+                <a class="navbar-brand text-white text-decoration-none" href="/">
+                    <div class="brand-mark">
+                        <span class="brand-badge">CL</span>
+                        <div>
+                            <p class="brand-name">CL.WebLogic Starter</p>
+                            <p class="brand-subtitle">A themed 404 that still feels on-brand</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </nav>
+
+        <section class="hero-panel text-center">
+            <p class="eyebrow mx-auto">404</p>
+            <h1 class="hero-title mx-auto">{{title}}</h1>
+            <p class="hero-copy mx-auto">No route was registered for <code>{{path}}</code>.</p>
+            <div class="hero-actions justify-content-center">
+                <a class="btn btn-warning fw-semibold" href="/">Back to home</a>
+                <a class="btn btn-outline-light" href="/weblogic/apiexplorer">API explorer</a>
+                <a class="btn btn-outline-light" href="/plugins/theme-showcase">Plugin showcase</a>
+            </div>
+        </section>
+
+        <section class="section-wrap">
+            <div class="metric-grid">
+                <article class="metric-card">
+                    <p class="metric-label">Try next</p>
+                    <p class="metric-value">Home</p>
+                    <p class="metric-note">A polished landing page for the starter demo.</p>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Explore</p>
+                    <p class="metric-value">API</p>
+                    <p class="metric-note">See the WebLogic explorer and plugin metadata surfaces.</p>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Check</p>
+                    <p class="metric-value">Plugins</p>
+                    <p class="metric-note">The plugin showcase keeps the runtime feel consistent.</p>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Context</p>
+                    <p class="metric-value"><code>{{path}}</code></p>
+                    <p class="metric-note">Request-aware theme pages can still stay helpful when a route is missing.</p>
+                </article>
+            </div>
+        </section>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
+    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="/assets/site.js"></script>
+</body>
+</html>

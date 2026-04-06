@@ -1,0 +1,31 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs and temp files
+*.log
+*.pid
+*.cache
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sample runtime data
+samples/**/data/keys/
+samples/**/data/codelogic/
+samples/**/data/app/logs/
+samples/**/data/**/logs/
+samples/**/data/**/backups/
+
+# Keep source-owned sample plugin config, but ignore generated runtime copies
+samples/**/bin/
+samples/**/obj/
