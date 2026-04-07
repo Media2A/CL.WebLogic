@@ -1,128 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>About</title>
-    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-    <div class="site-shell">
-        <nav class="navbar navbar-expand-lg navbar-dark px-3 py-3 site-navbar">
-            <div class="container-fluid px-0">
-                <a class="navbar-brand text-white text-decoration-none" href="/">
-                    <div class="brand-mark">
-                        <span class="brand-badge">CL</span>
-                        <div>
-                            <p class="brand-name">CL.WebLogic Starter</p>
-                            <p class="brand-subtitle">About the runtime, theme, and request context</p>
-                        </div>
-                    </div>
-                </a>
-                <div class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-                    <a class="nav-link text-white-50" href="/">Home</a>
-                    <a class="nav-link text-white-50" href="/login">Login</a>
-                    <a class="nav-link text-white-50" href="/rbac">RBAC</a>
-                    <a class="nav-link text-white-50" href="/plugins/theme-showcase">Plugin Showcase</a>
-                    <a class="nav-link text-white-50" href="/weblogic/apiexplorer">API Explorer</a>
-                </div>
-            </div>
-        </nav>
+{layout:layouts/main}
 
-        <section class="hero-panel">
-            <div class="row g-4 align-items-center">
-                <div class="col-lg-8">
-                    <p class="eyebrow">About this starter</p>
-                    <h1 class="hero-title">{{title}}</h1>
-                    <p class="hero-copy">Starter websites should be small, obvious, and easy to extend.</p>
-                    <p class="hero-copy">This theme is a showcase surface for WebLogic: application routes, plugin routes, the API explorer, and request-aware rendering all sit under one coherent shell.</p>
-                </div>
-                <div class="col-lg-4">
-                    <div class="demo-panel">
-                        <p class="section-title">Current request</p>
-                        <div class="mt-3">
-                            <p class="mb-2">Path: <code>{{page_path}}</code></p>
-                            <p class="mb-2">Method: <code>{{request_method}}</code></p>
-                            <p class="mb-2">User: <code>{{current_user}}</code></p>
-                            <p class="mb-0">Groups: <code>{{current_groups}}</code></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <article class="metric-card h-100">
-                        <p class="metric-label">Theme</p>
-                        <p class="metric-value">{{theme_name}}</p>
-                        <p class="metric-note">The starter theme is designed to feel more like a product demo than a template stub.</p>
-                    </article>
-                </div>
-                <div class="col-md-6">
-                    <article class="metric-card h-100">
-                        <p class="metric-label">Plugins</p>
-                        <p class="metric-value">{{plugin_count}}</p>
-                        <p class="metric-note">Plugin pages and APIs are presented using the same shell and typography as the application.</p>
-                    </article>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="demo-panel">
-                <div class="section-header">
-                    <div>
-                        <h2 class="section-title">What this demo shows</h2>
-                        <p class="section-subtitle">A quick list of the runtime surfaces that are easy to explore from the theme.</p>
-                    </div>
-                    <span class="badge rounded-pill badge-soft">Bootstrap + jQuery</span>
-                </div>
-                <div class="row g-3 mt-1">
-                    <div class="col-md-4">
-                        <div class="glass-card p-3 rounded-4 h-100">
-                            <p class="mb-2 fw-semibold">Page context</p>
-                            <p class="mb-0">Current path, method, user, and access groups can all be shown directly on the page.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="glass-card p-3 rounded-4 h-100">
-                            <p class="mb-2 fw-semibold">Plugins</p>
-                            <p class="mb-0">A plugin page can look and feel like part of the site while still being contributed externally.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="glass-card p-3 rounded-4 h-100">
-                            <p class="mb-2 fw-semibold">Explorer</p>
-                            <p class="mb-0">The built-in API explorer gives the runtime a self-describing surface from day one.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="hero-actions">
-                <a class="btn btn-warning fw-semibold" href="/">Back home</a>
-                <a class="btn btn-outline-light" href="/login">Login</a>
-                <a class="btn btn-outline-light" href="/rbac">RBAC hub</a>
-                <a class="btn btn-outline-light" href="/plugins/theme-showcase">Plugin showcase</a>
-                <a class="btn btn-outline-light" href="/api/site">Site API</a>
-                <a class="btn btn-outline-light" href="/weblogic/apiexplorer">API explorer</a>
-            </div>
-        </section>
-
-        <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
-            <span>Request context lives in the theme, but is powered by CL.WebLogic.</span>
-            <span data-current-year></span>
-        </footer>
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
     </div>
+    <div class="col-lg-4">
+        {widgetarea:site.sidebar}
+    </div>
+</div>
+{/section}
 
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@9.0.6/dist/browser/signalr.min.js"></script>
-    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
-    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="/assets/site.js"></script>
-</body>
-</html>
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <article class="metric-card h-100">
+                <p class="metric-label">Theme</p>
+                <p class="metric-value">{model:theme_name}</p>
+                <p class="metric-note">The starter theme is designed to feel more like a product demo than a template stub.</p>
+            </article>
+        </div>
+        <div class="col-md-6">
+            <article class="metric-card h-100">
+                <p class="metric-label">Plugins</p>
+                <p class="metric-value">{model:plugin_count}</p>
+                <p class="metric-note">Plugin pages and APIs are presented using the same shell and typography as the application.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="demo-panel">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">What this demo shows</h2>
+                <p class="section-subtitle">A quick list of the runtime surfaces that are easy to explore from the theme.</p>
+            </div>
+            <span class="badge rounded-pill badge-soft">Bootstrap + jQuery</span>
+        </div>
+        <div class="row g-3 mt-1">
+            {foreach:model:about_cards}
+            <div class="col-md-4">
+                <div class="glass-card p-3 rounded-4 h-100">
+                    <p class="mb-2 fw-semibold">{item:Title}</p>
+                    <p class="mb-0">{item:Description}</p>
+                </div>
+            </div>
+            {/foreach}
+        </div>
+    </div>
+</section>
+
+<section class="section-wrap">
+    {widget:starter.quick-links}
+</section>

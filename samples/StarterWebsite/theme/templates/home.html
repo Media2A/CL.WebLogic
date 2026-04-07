@@ -1,226 +1,80 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{title}}</title>
-    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-    <div class="site-shell">
-        <nav class="navbar navbar-expand-lg navbar-dark px-3 py-3 site-navbar">
-            <div class="container-fluid px-0">
-                <a class="navbar-brand text-white text-decoration-none" href="/">
-                    <div class="brand-mark">
-                        <span class="brand-badge">CL</span>
-                        <div>
-                            <p class="brand-name">CL.WebLogic Starter</p>
-                            <p class="brand-subtitle">Bootstrap demo, plugin runtime, and request-aware theme</p>
-                        </div>
-                    </div>
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#starterNav" aria-controls="starterNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="starterNav">
-                    <div class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-                        <a class="nav-link text-white-50" href="/">Home</a>
-                        <a class="nav-link text-white-50" href="/about">About</a>
-                        <a class="nav-link text-white-50" href="/login">Login</a>
-                        <a class="nav-link text-white-50" href="/rbac">RBAC</a>
-                        <a class="nav-link text-white-50" href="/plugins/theme-showcase">Plugin Showcase</a>
-                        <a class="nav-link text-white-50" href="/weblogic/apiexplorer">API Explorer</a>
-                        <a class="nav-link text-white-50" href="/api/site">Site API</a>
-                    </div>
-                </div>
-            </div>
-        </nav>
+{layout:layouts/main}
 
-        <section class="hero-panel">
-            <div class="row align-items-center g-4">
-                <div class="col-lg-7">
-                    <p class="eyebrow">Starter website</p>
-                    <h1 class="hero-title">{{title}}</h1>
-                    <p class="hero-copy">{{description}}</p>
-                    <p class="hero-copy mb-0">{{tagline}}</p>
-                    <div class="hero-actions">
-                        <a class="btn btn-warning fw-semibold" href="/weblogic/apiexplorer" data-scroll-to="#explorerPanel">Explore APIs</a>
-                        <a class="btn btn-outline-light" href="/login">Try login flow</a>
-                        <a class="btn btn-outline-light" href="/plugins/theme-showcase">View plugin page</a>
-                        <button class="btn btn-outline-light" type="button" data-refresh-dashboard>Refresh demo data</button>
-                    </div>
-                    <div class="mt-4">
-                        <span class="hero-badge"><span class="status-dot"></span> Shared runtime</span>
-                        <span class="hero-badge">Theme: {{theme_name}}</span>
-                        <span class="hero-badge">Page: <code>{{page.path}}</code></span>
-                        <span class="hero-badge">User: <code>{{page.user_id}}</code></span>
-                    </div>
-                </div>
-                <div class="col-lg-5">
-                    <div class="demo-panel h-100">
-                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                            <div>
-                                <p class="section-title mb-1">Live activity</p>
-                                <p class="section-subtitle mb-0">A lightweight activity stream that is ready for SignalR later.</p>
-                            </div>
-                            <span class="kpi-pill">Auto-refresh</span>
-                        </div>
-                        <ul class="list-group list-group-flush activity-list" data-live-feed>
-                            <li class="list-group-item text-secondary">Waiting for the first WebLogic pulse.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="section-header">
-                <div>
-                    <h2 class="section-title">Platform snapshot</h2>
-                    <p class="section-subtitle">The current request, registered routes, and plugin inventory are all surfaced here.</p>
-                </div>
-                <span class="kpi-pill">Updated on demand</span>
-            </div>
-            <div class="metric-grid">
-                <article class="metric-card">
-                    <p class="metric-label">Registered routes</p>
-                    <p class="metric-value" data-route-count>0</p>
-                    <p class="metric-note">App, plugin, and WebLogic runtime routes combined.</p>
-                </article>
-                <article class="metric-card">
-                    <p class="metric-label">Contributors</p>
-                    <p class="metric-value" data-plugin-count>0</p>
-                    <p class="metric-note">Application, plugins, and built-in library contributions.</p>
-                </article>
-                <article class="metric-card">
-                    <p class="metric-label">API endpoints</p>
-                    <p class="metric-value" data-api-count>0</p>
-                    <p class="metric-note">Everything the explorer can see, including plugin APIs.</p>
-                </article>
-                <article class="metric-card">
-                    <p class="metric-label">Request context</p>
-                    <p class="metric-value" data-current-user>anonymous</p>
-                    <p class="metric-note" data-current-path>/</p>
-                </article>
-            </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="demo-panel h-100">
-                        <p class="section-title">App routes</p>
-                        <p class="section-subtitle">Core pages are registered by the application and rendered through the shared theme.</p>
-                        <ul class="list-group list-group-flush mt-3" data-route-list>
-                            <li class="list-group-item text-secondary">No routes loaded yet.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="demo-panel h-100">
-                        <p class="section-title">Plugin routes</p>
-                        <p class="section-subtitle">Plugins can add pages and APIs without owning the site shell.</p>
-                        <ul class="list-group list-group-flush mt-3" data-plugin-list>
-                            <li class="list-group-item text-secondary">No plugins loaded yet.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="demo-panel h-100">
-                        <p class="section-title">API explorer</p>
-                        <p class="section-subtitle">This is the built-in discovery surface for WebLogic and plugin APIs.</p>
-                        <ul class="list-group list-group-flush mt-3" data-api-list>
-                            <li class="list-group-item text-secondary">No APIs loaded yet.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="row g-4">
-                <div class="col-lg-7">
-                    <div class="demo-panel h-100">
-                        <div class="section-header">
-                            <div>
-                                <h2 class="section-title">Auth and RBAC demo</h2>
-                                <p class="section-subtitle">The theme is ready for authenticated blocks and group-specific content.</p>
-                            </div>
-                            <span class="badge rounded-pill badge-soft-green">RBAC-ready</span>
-                        </div>
-                        <div class="auth-gate">
-                            <p class="mb-2">Current user: <code data-current-user>{{page.user_id}}</code></p>
-                            <p class="mb-2">Access groups: <code data-current-groups>(none)</code></p>
-                            <p class="mb-3">The themed content below is driven by request context and the access-group gates built into WebLogic.</p>
-                        </div>
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 rounded-4 h-100">
-                                    <p class="mb-2 text-uppercase small text-secondary">Public block</p>
-                                    <p class="mb-0">Always visible. Good for page metadata, banners, and shared CTAs.</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 rounded-4 h-100">
-                                    <p class="mb-2 text-uppercase small text-secondary">Admin block</p>
-                                    <p class="mb-0">Use the theme auth blocks to conditionally show content for the <code>admin</code> group.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="code-shell mt-3">
-<pre class="mb-0"><code>{page:auth:requireaccessgroup:admin}
-This block only renders for admin requests.
-{/page:auth}</code></pre>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-5">
-                    <div class="demo-panel h-100" id="explorerPanel">
-                        <p class="section-title">Quick links</p>
-                        <p class="section-subtitle">Shortcuts to the runtime surfaces that the demo site showcases.</p>
-                        <div class="d-grid gap-2 mt-3">
-                            <a class="btn btn-outline-light text-start" href="/about">About page and request context</a>
-                            <a class="btn btn-outline-light text-start" href="/login">Starter login page</a>
-                            <a class="btn btn-outline-light text-start" href="/rbac">RBAC hub</a>
-                            <a class="btn btn-outline-light text-start" href="/rbac/admin">Admin-only page</a>
-                            <a class="btn btn-outline-light text-start" href="/plugins/theme-showcase">Plugin showcase page</a>
-                            <a class="btn btn-outline-light text-start" href="/api/site">Site API</a>
-                            <a class="btn btn-outline-light text-start" href="/api/plugins/manifest">Plugin manifest API</a>
-                            <a class="btn btn-outline-light text-start" href="/api/plugins/secure">RBAC-protected API</a>
-                            <a class="btn btn-outline-light text-start" href="/weblogic/apiexplorer">WebLogic API explorer</a>
-                        </div>
-                        <div class="mt-4 p-3 rounded-4" style="background: rgba(255,255,255,0.04); border: 1px solid var(--site-border);">
-                            <p class="mb-1 text-uppercase small text-secondary">Current request</p>
-                            <p class="mb-1">Path: <code data-current-path>{{page.path}}</code></p>
-                            <p class="mb-1">Method: <code data-current-method>{{page.method}}</code></p>
-                            <p class="mb-0">Theme: <code>{{theme_name}}</code></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
-            <span>Built on CL.WebLogic and themed as a full demo shell.</span>
-            <span data-current-year></span>
-        </footer>
-    </div>
-
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="siteToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <strong class="me-auto" id="siteToastTitle">WebLogic</strong>
-                <small>now</small>
-                <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body" id="siteToastBody">Demo loaded.</div>
+{section:hero}
+<div class="row align-items-center g-4">
+    <div class="col-lg-7">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <p class="hero-copy mb-0">{model:tagline}</p>
+        <div class="hero-actions">
+            <a class="btn btn-warning fw-semibold" href="/template-lab">Open template lab</a>
+            <a class="btn btn-outline-light" href="/login">Try login flow</a>
+            <a class="btn btn-outline-light" href="/plugins/theme-showcase">View plugin page</a>
+            <button class="btn btn-outline-light" type="button" data-refresh-dashboard>Refresh demo data</button>
+        </div>
+        <div class="mt-4">
+            <span class="hero-badge"><span class="status-dot"></span> Shared runtime</span>
+            <span class="hero-badge">Theme: {model:theme_name}</span>
+            <span class="hero-badge">Page: <code>{page:path}</code></span>
+            <span class="hero-badge">User: <code>{page:user_id}</code></span>
         </div>
     </div>
+    <div class="col-lg-5">
+        {widget:starter.request-glance title="Current request"}
+    </div>
+</div>
+{/section}
 
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@9.0.6/dist/browser/signalr.min.js"></script>
-    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
-    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="/assets/site.js"></script>
-</body>
-</html>
+<section class="section-wrap">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">Platform snapshot</h2>
+            <p class="section-subtitle">This page is now a direct showcase of loops, shared layout rendering, and widget composition.</p>
+        </div>
+        <span class="kpi-pill">Template engine v2</span>
+    </div>
+    <div class="metric-grid">
+        {foreach:model:snapshot_cards}
+        <article class="metric-card">
+            <p class="metric-label">{item:Label}</p>
+            <p class="metric-value">{item:Value}</p>
+            <p class="metric-note">{item:Note}</p>
+        </article>
+        {/foreach}
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="demo-panel h-100">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">What changed</h2>
+                        <p class="section-subtitle">The page model stays in C#, but the presentation is now more composable and plugin-friendly.</p>
+                    </div>
+                    <span class="badge rounded-pill badge-soft-green">Foundation ready</span>
+                </div>
+                <div class="row g-3 mt-1">
+                    {foreach:model:template_features}
+                    <div class="col-md-6">
+                        <div class="glass-card p-3 rounded-4 h-100">
+                            <p class="mb-2 fw-semibold">{item:Title}</p>
+                            <p class="mb-0">{item:Description}</p>
+                        </div>
+                    </div>
+                    {/foreach}
+                </div>
+                {if:accessgroup:admin}
+                <div class="auth-gate mt-4">
+                    <p class="mb-0">This admin-only block is using the new generic conditional syntax instead of the older specialized auth block.</p>
+                </div>
+                {/if}
+            </div>
+        </div>
+        <div class="col-lg-5">
+            {widget:starter.quick-links}
+        </div>
+    </div>
+</section>

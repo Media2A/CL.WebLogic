@@ -1,0 +1,64 @@
+{layout:layouts/main}
+
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <div class="hero-actions">
+            <a class="btn btn-warning fw-semibold" href="/">Back home</a>
+            <a class="btn btn-outline-light" href="/weblogic/apiexplorer">API explorer</a>
+            <a class="btn btn-outline-light" href="/api/site">Site API</a>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        {widgetarea:site.sidebar}
+    </div>
+</div>
+{/section}
+
+<section class="section-wrap">
+    <div class="row g-4">
+        {foreach:model:features}
+        <div class="col-md-6">
+            <article class="metric-card h-100">
+                <p class="metric-label">{item:Title}</p>
+                <p class="metric-note mb-0">{item:Description}</p>
+            </article>
+        </div>
+        {/foreach}
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="demo-panel">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">What this page proves</h2>
+                <p class="section-subtitle">The model came from C#, but the structure stays HTML-first and easy to read.</p>
+            </div>
+            <span class="badge rounded-pill badge-soft">Page script</span>
+        </div>
+        <div class="row g-3 mt-1">
+            {foreach:model:capabilities}
+            <div class="col-md-6">
+                <div class="glass-card p-3 rounded-4 h-100">
+                    <p class="mb-2 fw-semibold">{item:Label}</p>
+                    <p class="mb-0">{item:Value}</p>
+                </div>
+            </div>
+            {/foreach}
+        </div>
+        {if:auth}
+        <div class="auth-gate mt-4">
+            <p class="mb-0">You are authenticated as <code>{model:current_user}</code>, so auth-aware template blocks are active.</p>
+        </div>
+        {/if}
+        {ifnot:auth}
+        <div class="auth-gate mt-4">
+            <p class="mb-0">You are currently anonymous, so this page is showing the unauthenticated branch of the template.</p>
+        </div>
+        {/ifnot}
+    </div>
+</section>

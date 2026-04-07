@@ -1,0 +1,19 @@
+<div class="demo-panel h-100">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">{model:title}</h2>
+            <p class="section-subtitle">This widget is registered by the application and rendered through the shared template engine.</p>
+        </div>
+        <span class="badge rounded-pill badge-soft-green">Widget</span>
+    </div>
+    <div class="row g-3 mt-1">
+        {foreach:model:links}
+        <div class="col-md-6">
+            <a class="glass-card d-block p-3 rounded-4 h-100 text-decoration-none text-reset" href="{item:Url}">
+                <p class="mb-2 fw-semibold">{item:Label}</p>
+                <p class="mb-0 text-secondary">{item:Description}</p>
+            </a>
+        </div>
+        {/foreach}
+    </div>
+</div>

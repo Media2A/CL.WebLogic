@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {renderhead}
+    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body data-weblogic-nav="auto">
+    <div class="site-shell" data-weblogic-shell>
+        {partial:partials/site-nav}
+        <section class="hero-panel">
+            {rendersection:hero}
+        </section>
+        {renderbody}
+        <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
+            <span>Built on CL.WebLogic and rendered with template engine v2.</span>
+            <span data-current-year></span>
+        </footer>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="siteToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="siteToastTitle">WebLogic</strong>
+                <small>now</small>
+                <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="siteToastBody">Demo loaded.</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@9.0.6/dist/browser/signalr.min.js"></script>
+    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
+    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="/assets/weblogic.client.js"></script>
+    <script src="/assets/site.js"></script>
+</body>
+</html>

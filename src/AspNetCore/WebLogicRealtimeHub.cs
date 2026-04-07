@@ -111,6 +111,18 @@ public sealed class SignalRWebLogicRealtimeBroadcaster : IWebLogicRealtimeBroadc
                     .SendAsync("weblogic:event", message, cancellationToken)
                     .ConfigureAwait(false);
                 break;
+
+            case WebLogicRealtimeAudience.User:
+                if (envelope.Users.Count == 0)
+                    return;
+
+                foreach (var user in envelope.Users)
+                {
+                    await _hubContext.Clients.Group($"user:{user}")
+                        .SendAsync("weblogic:event", message, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                break;
         }
     }
 }

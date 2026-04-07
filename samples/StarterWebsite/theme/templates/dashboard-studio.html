@@ -1,0 +1,121 @@
+{layout:layouts/main}
+
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <div class="hero-actions">
+            <a class="btn btn-warning fw-semibold" href="/dashboard">Widget demo dashboard</a>
+            <a class="btn btn-outline-light" href="/api/weblogic/dashboard/layout?dashboardKey={model:dashboard_key}&ownerKey={model:current_user}">Layout API</a>
+            <a class="btn btn-outline-light" href="/api/weblogic/widgets">Widget catalog API</a>
+        </div>
+        <div class="mt-4">
+            <span class="hero-badge">User: <code>{model:current_user}</code></span>
+            <span class="hero-badge">Groups: <code>{model:current_groups}</code></span>
+            <span class="hero-badge">Stored in MySQL</span>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="demo-panel">
+            <p class="section-title">How it works</p>
+            <p class="section-subtitle">Add widgets, move them up or down, remove the ones you do not want, then save. The current layout is tied to your signed-in account.</p>
+            <div class="code-shell mt-3">
+<pre class="mb-0"><code>/api/weblogic/dashboard/layout
+/api/weblogic/dashboard/layout/save
+/api/weblogic/dashboard/render</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{/section}
+
+<section class="section-wrap" data-dashboard-studio data-dashboard-key="{model:dashboard_key}" data-dashboard-owner-key="{model:current_user}">
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="demo-panel h-100">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Available widgets</h2>
+                        <p class="section-subtitle">These come from the live WebLogic widget registry.</p>
+                    </div>
+                    <span class="kpi-pill" data-dashboard-catalog-count>0 widgets</span>
+                </div>
+                <div class="vstack gap-3 mt-3" data-dashboard-widget-catalog>
+                    <div class="glass-card p-4 rounded-4 text-secondary">Loading widget catalog...</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-8">
+            <div class="demo-panel">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Layout editor</h2>
+                        <p class="section-subtitle">The editor tracks the saved per-user layout before the preview refreshes.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-light" type="button" data-dashboard-reload>Reload layout</button>
+                        <button class="btn btn-warning fw-semibold" type="button" data-dashboard-save>Save layout</button>
+                    </div>
+                </div>
+                <div class="row g-4 mt-1">
+                    <div class="col-lg-7">
+                        <div class="glass-card p-4 rounded-4 h-100">
+                            <div class="section-header">
+                                <div>
+                                    <h3 class="section-title h5 mb-0">Main zone</h3>
+                                    <p class="section-subtitle mb-0">Primary content widgets shown in order.</p>
+                                </div>
+                                <span class="badge rounded-pill badge-soft-green" data-dashboard-zone-count="main">0</span>
+                            </div>
+                            <div class="vstack gap-3 mt-3" data-dashboard-zone-editor="main">
+                                <div class="text-secondary">Loading main zone...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="glass-card p-4 rounded-4 h-100">
+                            <div class="section-header">
+                                <div>
+                                    <h3 class="section-title h5 mb-0">Sidebar zone</h3>
+                                    <p class="section-subtitle mb-0">Support widgets and small context panels.</p>
+                                </div>
+                                <span class="badge rounded-pill badge-soft" data-dashboard-zone-count="sidebar">0</span>
+                            </div>
+                            <div class="vstack gap-3 mt-3" data-dashboard-zone-editor="sidebar">
+                                <div class="text-secondary">Loading sidebar zone...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="demo-panel">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Saved preview</h2>
+                        <p class="section-subtitle">This preview is rendered back through WebLogic using your saved layout from MySQL.</p>
+                    </div>
+                    <span class="badge rounded-pill badge-soft">Per-user render</span>
+                </div>
+                <div class="row g-4 mt-1" data-dashboard-preview-zone="main">
+                    <div class="col-12">
+                        <div class="glass-card p-4 rounded-4 text-secondary">Loading saved main zone...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="demo-panel" data-dashboard-preview-zone="sidebar">
+                <div class="glass-card p-4 rounded-4 text-secondary">Loading saved sidebar zone...</div>
+            </div>
+        </div>
+    </div>
+</section>

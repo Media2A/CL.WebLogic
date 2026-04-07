@@ -1,4 +1,5 @@
 using CL.WebLogic.Runtime;
+using CL.WebLogic.Theming;
 
 namespace CL.WebLogic.Routing;
 
@@ -42,6 +43,14 @@ public sealed class WebRegistrationContext
     public void RegisterPage(string path, WebRouteOptions options, WebRouteHandler handler, params string[] methods) =>
         _api.Register(path, WebRouteKind.Page, handler, Contributor, options, methods);
 
+    public void RegisterPageScript<TScript>(string path, params string[] methods)
+        where TScript : class, IWebPageScript =>
+        RegisterPageScript<TScript>(path, new WebRouteOptions(), methods);
+
+    public void RegisterPageScript<TScript>(string path, WebRouteOptions options, params string[] methods)
+        where TScript : class, IWebPageScript =>
+        RegisterPage(path, options, request => WebPageScriptExecutor.ExecuteAsync<TScript>(request), methods);
+
     public void RegisterApi(string path, WebRouteHandler handler, params string[] methods) =>
         RegisterApi(path, new WebRouteOptions(), handler, methods);
 
@@ -53,6 +62,18 @@ public sealed class WebRegistrationContext
 
     public void RegisterFallback(WebRouteOptions options, WebRouteHandler handler, params string[] methods) =>
         _api.RegisterFallback(handler, Contributor, options, methods);
+
+    public void RegisterWidget(string name, WebWidgetHandler handler) =>
+        RegisterWidget(name, new WebWidgetOptions(), handler);
+
+    public void RegisterWidget(string name, WebWidgetOptions options, WebWidgetHandler handler) =>
+        _api.RegisterWidget(name, handler, Contributor, options);
+
+    public void RegisterWidgetArea(string areaName, string widgetName) =>
+        RegisterWidgetArea(areaName, widgetName, new WebWidgetAreaOptions());
+
+    public void RegisterWidgetArea(string areaName, string widgetName, WebWidgetAreaOptions options) =>
+        _api.RegisterWidgetArea(areaName, widgetName, Contributor, options);
 }
 
 public sealed class WebRouteDescriptor
@@ -82,10 +103,12 @@ public sealed class WebContributorSummary
 public sealed class WebLogicRegistrationApi
 {
     private readonly WebRouteRegistry _routes;
+    private readonly WebWidgetRegistry _widgets;
 
-    internal WebLogicRegistrationApi(WebRouteRegistry routes)
+    internal WebLogicRegistrationApi(WebRouteRegistry routes, WebWidgetRegistry widgets)
     {
         _routes = routes;
+        _widgets = widgets;
     }
 
     public WebRegistrationContext CreateContext(WebContributorDescriptor contributor) =>
@@ -109,5 +132,23 @@ public sealed class WebLogicRegistrationApi
         params string[] methods)
     {
         _routes.RegisterFallback(handler, contributor, options, methods);
+    }
+
+    internal void RegisterWidget(
+        string name,
+        WebWidgetHandler handler,
+        WebContributorDescriptor contributor,
+        WebWidgetOptions options)
+    {
+        _widgets.Register(name, handler, contributor, options);
+    }
+
+    internal void RegisterWidgetArea(
+        string areaName,
+        string widgetName,
+        WebContributorDescriptor contributor,
+        WebWidgetAreaOptions options)
+    {
+        _widgets.RegisterAreaWidget(areaName, widgetName, contributor, options);
     }
 }

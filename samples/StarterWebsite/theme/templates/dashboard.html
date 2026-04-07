@@ -1,0 +1,122 @@
+{layout:layouts/main}
+
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <div class="hero-actions">
+            <a class="btn btn-warning fw-semibold" href="/api/weblogic/widgets">Widget API</a>
+            <a class="btn btn-outline-light" href="/api/weblogic/widgetareas">Widget area API</a>
+            <a class="btn btn-outline-light" href="/dashboard/studio">Dashboard Studio</a>
+            <a class="btn btn-outline-light" href="/weblogic/widgets">Built-in widget explorer</a>
+            <button class="btn btn-outline-light" type="button" data-widget-dashboard-refresh>Reload widgets</button>
+        </div>
+        <div class="mt-4">
+            <span class="hero-badge">Sorted by source and name</span>
+            <span class="hero-badge">Rendered over AJAX</span>
+            <span class="hero-badge">Current user: <code>{page:user_id}</code></span>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div data-widget-area-region="dashboard.sidebar" data-widget-area-target="/dashboard">
+            {widgetarea:dashboard.sidebar}
+        </div>
+    </div>
+</div>
+{/section}
+
+<section class="section-wrap">
+    <div class="demo-panel">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Widget filters</h2>
+                <p class="section-subtitle">The dashboard asks WebLogic for the widget registry and then builds the preview grid in the browser.</p>
+            </div>
+            <span class="badge rounded-pill badge-soft-green">AJAX widgets</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            {foreach:model:dashboard_filters}
+            <button class="btn {if:item:Active}btn-warning fw-semibold{/if}{ifnot:item:Active}btn-outline-light{/ifnot}" type="button" data-widget-filter="{item:Value}">
+                {item:Label}
+            </button>
+            {/foreach}
+        </div>
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="demo-panel">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Server-side area composition</h2>
+                <p class="section-subtitle">This block is rendered directly in the page through <code>{widgetarea:dashboard.main}</code>, and widget actions can ask WebLogic to refresh only this area.</p>
+            </div>
+            <span class="badge rounded-pill badge-soft">Template area</span>
+        </div>
+        <div class="row g-4 mt-1" data-widget-area-region="dashboard.main" data-widget-area-target="/dashboard">
+            {widgetarea:dashboard.main}
+        </div>
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="demo-panel h-100">
+                <p class="section-title">Widget areas</p>
+                <p class="section-subtitle">Areas let the app and plugins compose shared dashboard regions without the page naming each widget manually.</p>
+                <ul class="list-group list-group-flush mt-3" data-widget-area-list>
+                    <li class="list-group-item text-secondary">Loading widget areas...</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="demo-panel h-100">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Area composition board</h2>
+                        <p class="section-subtitle">Each area preview is rendered through the combined area render endpoint, so plugins can inject themselves into shared regions.</p>
+                    </div>
+                    <span class="kpi-pill" data-widget-area-count>0 areas</span>
+                </div>
+                <div class="row g-4 mt-1" data-widget-area-grid>
+                    <div class="col-12">
+                        <div class="glass-card p-4 rounded-4 text-secondary">Loading widget areas...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="demo-panel h-100">
+                <p class="section-title">Widget catalog</p>
+                <p class="section-subtitle">Metadata comes from <code>/api/weblogic/widgets</code>.</p>
+                <ul class="list-group list-group-flush mt-3" data-widget-list>
+                    <li class="list-group-item text-secondary">Loading widget registry...</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="demo-panel h-100">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Widget preview board</h2>
+                        <p class="section-subtitle">Each card below is fetched through the widget render API so this can grow into a real dashboard later.</p>
+                    </div>
+                    <span class="kpi-pill" data-widget-count>0 widgets</span>
+                </div>
+                <div class="row g-4 mt-1" data-widget-grid>
+                    <div class="col-12">
+                        <div class="glass-card p-4 rounded-4 text-secondary">Loading widget previews...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

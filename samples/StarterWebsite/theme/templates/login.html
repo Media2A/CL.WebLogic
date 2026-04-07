@@ -1,82 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login</title>
-    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-    <div class="site-shell">
-        <nav class="navbar navbar-expand-lg navbar-dark px-3 py-3 site-navbar">
-            <div class="container-fluid px-0">
-                <a class="navbar-brand text-white text-decoration-none" href="/">
-                    <div class="brand-mark">
-                        <span class="brand-badge">CL</span>
-                        <div>
-                            <p class="brand-name">CL.WebLogic Starter</p>
-                            <p class="brand-subtitle">Demo login and RBAC walkthrough</p>
-                        </div>
-                    </div>
-                </a>
-                <div class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-                    <a class="nav-link text-white-50" href="/">Home</a>
-                    <a class="nav-link text-white-50" href="/about">About</a>
-                    <a class="nav-link text-white-50" href="/weblogic/auth-demo">WebLogic auth demo</a>
-                </div>
-            </div>
-        </nav>
+{layout:layouts/main}
 
-        <section class="hero-panel">
-            <div class="row g-4 align-items-center">
-                <div class="col-lg-6">
-                    <p class="eyebrow">Starter auth flow</p>
-                    <h1 class="hero-title">Sign in to the RBAC demo</h1>
-                    <p class="hero-copy">This starter keeps auth simple on purpose: configured demo users, session-backed identity, and role-based access checks that are easy to inspect.</p>
-                    <p class="hero-copy mb-0">Once signed in, try the authenticated hub, the editor page, and the admin page to see where access is allowed or denied.</p>
-                </div>
-                <div class="col-lg-6">
-                    <div class="demo-panel">
-                        <p class="section-title">Login</p>
-                        <p class="section-subtitle">Use one of the seeded accounts below.</p>
-                        <div class="alert {{message_class}} mt-3" role="alert" style="{{message_style}}">
-                            {{message}}
-                        </div>
-                        <form class="d-grid gap-3 mt-3" method="post" action="/login">
-                            <input class="form-control form-control-lg" type="text" name="userId" placeholder="User ID" value="demo-admin">
-                            <input class="form-control form-control-lg" type="password" name="password" placeholder="Password" value="admin123">
-                            <input type="hidden" name="returnUrl" value="{{return_url}}">
-                            <button class="btn btn-warning fw-semibold" type="submit">Sign in</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </section>
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-7">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <p class="hero-copy mb-0">Once signed in, try the authenticated hub, the editor page, and the admin page to see where access is allowed or denied.</p>
+    </div>
+    <div class="col-lg-5">
+        {widget:starter.request-glance title="Login request"}
+    </div>
+</div>
+{/section}
 
-        <section class="section-wrap">
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="demo-panel">
+                <p class="section-title">Login</p>
+                <p class="section-subtitle">Use one of the seeded accounts below.</p>
+                <div class="alert {model:message_class} mt-3" role="alert" style="{model:message_style}">
+                    {model:message}
+                </div>
+                <form class="d-grid gap-3 mt-3" method="post" action="/login">
+                    <input class="form-control form-control-lg" type="text" name="userId" placeholder="User ID" value="demo-admin">
+                    <input class="form-control form-control-lg" type="password" name="password" placeholder="Password" value="admin123">
+                    <input type="hidden" name="returnUrl" value="{model:return_url}">
+                    <button class="btn btn-warning fw-semibold" type="submit">Sign in</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-6">
             <div class="demo-panel">
                 <div class="section-header">
                     <div>
                         <h2 class="section-title">Seeded demo users</h2>
-                        <p class="section-subtitle">These accounts are driven by the starter website config so the auth flow stays obvious while the rest of WebLogic evolves.</p>
+                        <p class="section-subtitle">These accounts are created in MySQL on startup so the flow stays easy to inspect.</p>
                     </div>
                     <span class="badge rounded-pill badge-soft-green">Session-backed</span>
                 </div>
                 <div class="demo-user-grid mt-3">
-                    {{demo_accounts}}
+                    {raw:model:demo_accounts}
                 </div>
             </div>
-        </section>
-
-        <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
-            <span>Starter auth is intentionally simple, but the RBAC behavior is real.</span>
-            <span data-current-year></span>
-        </footer>
+        </div>
     </div>
-
-    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
-    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="/assets/site.js"></script>
-</body>
-</html>
+</section>

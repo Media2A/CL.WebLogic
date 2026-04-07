@@ -1,0 +1,21 @@
+<div class="demo-panel h-100" data-widget-instance="{model:instance_id}" data-widget-name="{model:widget_name}" data-widget-refresh-on="dashboard.counter.updated">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">{model:title}</h2>
+            <p class="section-subtitle">This widget is refreshed when another widget publishes dashboard activity through WebLogic action responses.</p>
+        </div>
+        <span class="badge rounded-pill badge-soft">Widget messaging</span>
+    </div>
+    <ul class="list-group list-group-flush mt-3">
+        {foreach:model:entries}
+        <li class="list-group-item px-0 bg-transparent text-light border-secondary-subtle">
+            <div class="d-flex justify-content-between gap-3">
+                <strong>{item:Title}</strong>
+                <span class="small text-secondary">{item:TimestampUtc}</span>
+            </div>
+            <div class="small text-secondary mt-1">{item:Detail}</div>
+            <div class="small mt-1"><code>{item:Channel}</code></div>
+        </li>
+        {/foreach}
+    </ul>
+</div>

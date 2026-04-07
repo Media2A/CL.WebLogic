@@ -179,7 +179,8 @@ public sealed class WebLogicRuntime
                 result.TemplatePath,
                 result.Model,
                 ThemeRoot,
-                request).ConfigureAwait(false);
+                request,
+                result.Meta).ConfigureAwait(false);
             await httpContext.Response.WriteAsync(html).ConfigureAwait(false);
             return;
         }

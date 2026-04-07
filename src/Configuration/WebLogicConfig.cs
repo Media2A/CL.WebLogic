@@ -13,6 +13,7 @@ public sealed class WebLogicConfig : ConfigModelBase
     public AuthConfig Auth { get; set; } = new();
     public StorageConfig Storage { get; set; } = new();
     public MySqlConfig MySql { get; set; } = new();
+    public WidgetConfig Widgets { get; set; } = new();
 
     public override ConfigValidationResult Validate()
     {
@@ -109,4 +110,10 @@ public sealed class MySqlConfig
     public bool EnableRequestLogging { get; set; } = false;
     public bool SyncTablesOnStart { get; set; } = true;
     public string ConnectionId { get; set; } = "Default";
+}
+
+public sealed class WidgetConfig
+{
+    public bool EnablePersistentSettings { get; set; } = true;
+    public string SettingsFileName { get; set; } = "widget-settings.json";
 }

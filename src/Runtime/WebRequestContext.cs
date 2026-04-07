@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CL.WebLogic.Forms;
 using CL.WebLogic.Routing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,8 @@ public sealed class WebRequestContext
     private Dictionary<string, string>? _form;
     private IReadOnlyList<WebUploadedFile>? _files;
     private string? _bodyText;
+    private IFormCollection? _rawForm;
+    private WebFormContext? _formsContext;
 
     public required HttpContext HttpContext { get; init; }
     public required string Method { get; init; }
@@ -33,6 +36,7 @@ public sealed class WebRequestContext
     public bool IsAuthenticated => Identity.IsAuthenticated;
     public string UserId => Identity.UserId;
     public IReadOnlyCollection<string> AccessGroups => Identity.AccessGroups;
+    public WebFormContext Forms => _formsContext ??= new WebFormContext(this);
 
     public static WebRequestContext? Current => WebRequestContextAccessor.Current;
 
@@ -79,16 +83,7 @@ public sealed class WebRequestContext
         if (_form is not null)
             return new Dictionary<string, string>(_form, StringComparer.OrdinalIgnoreCase);
 
-        if (!HttpContext.Request.HasFormContentType)
-        {
-            _form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            _files = [];
-            return new Dictionary<string, string>(_form, StringComparer.OrdinalIgnoreCase);
-        }
-
-        HttpContext.Request.EnableBuffering();
-        var form = await HttpContext.Request.ReadFormAsync().ConfigureAwait(false);
-        HttpContext.Request.Body.Position = 0;
+        var form = await ReadFormCollectionAsync().ConfigureAwait(false);
 
         _form = form.ToDictionary(kv => kv.Key, kv => kv.Value.ToString(), StringComparer.OrdinalIgnoreCase);
         _files = form.Files
@@ -96,10 +91,30 @@ public sealed class WebRequestContext
                 file.Name,
                 file.FileName,
                 file.ContentType,
-                file.Length))
+                file.Length,
+                file))
             .ToArray();
 
         return new Dictionary<string, string>(_form, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public async Task<IFormCollection> ReadFormCollectionAsync()
+    {
+        if (_rawForm is not null)
+            return _rawForm;
+
+        if (!HttpContext.Request.HasFormContentType)
+        {
+            _rawForm = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(StringComparer.OrdinalIgnoreCase));
+            _form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _files = [];
+            return _rawForm;
+        }
+
+        HttpContext.Request.EnableBuffering();
+        _rawForm = await HttpContext.Request.ReadFormAsync().ConfigureAwait(false);
+        HttpContext.Request.Body.Position = 0;
+        return _rawForm;
     }
 
     public async Task<string?> GetFormValueAsync(string key, string? defaultValue = null)
@@ -152,11 +167,31 @@ public sealed class WebRequestContext
         HttpContext.Items[key] = value;
 }
 
-public sealed record WebUploadedFile(
-    string FieldName,
-    string FileName,
-    string ContentType,
-    long Length);
+public sealed class WebUploadedFile
+{
+    internal WebUploadedFile(
+        string fieldName,
+        string fileName,
+        string contentType,
+        long length,
+        IFormFile innerFile)
+    {
+        FieldName = fieldName;
+        FileName = fileName;
+        ContentType = contentType;
+        Length = length;
+        InnerFile = innerFile;
+    }
+
+    public string FieldName { get; }
+    public string FileName { get; }
+    public string ContentType { get; }
+    public long Length { get; }
+    internal IFormFile InnerFile { get; }
+
+    public Stream OpenReadStream() => InnerFile.OpenReadStream();
+    public Task CopyToAsync(Stream target, CancellationToken cancellationToken = default) => InnerFile.CopyToAsync(target, cancellationToken);
+}
 
 public sealed class WebRequestIdentity
 {

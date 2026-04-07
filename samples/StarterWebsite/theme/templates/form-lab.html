@@ -1,0 +1,67 @@
+{layout:layouts/main}
+
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <div class="hero-actions">
+            <a class="btn btn-warning fw-semibold" href="/">Back home</a>
+            <a class="btn btn-outline-light" href="/template-lab">Template lab</a>
+            <a class="btn btn-outline-light" href="/api/site">Site API</a>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        {widget:starter.request-glance title="Form lab request"}
+    </div>
+</div>
+{/section}
+
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-xl-7">
+            <div class="demo-panel">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Profile intake form</h2>
+                        <p class="section-subtitle">This form is defined in C#, rendered by WebLogic, exported as a client schema, validated in the browser, and validated again on the server before returning structured field errors. It now also includes provider-backed selects and async autocomplete search.</p>
+                    </div>
+                    <span class="badge rounded-pill badge-soft">C# model driven</span>
+                </div>
+                {raw:model:generated_form_html}
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="demo-panel h-100">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Runtime result</h2>
+                        <p class="section-subtitle">Server responses and normalized values land here after the form passes client checks.</p>
+                    </div>
+                    <span class="badge rounded-pill badge-soft-green">AJAX</span>
+                </div>
+                <div class="glass-card p-3 rounded-4 mt-3 d-none" data-profile-intake-result></div>
+                <div class="glass-card p-3 rounded-4 mt-3">
+                    <p class="fw-semibold mb-2">What this demo covers</p>
+                    <ul class="mb-0">
+                        <li>Server-rendered Bootstrap form HTML from the C# form definition</li>
+                        <li>Client validation generated from the C# form model</li>
+                        <li>Server binding through <code>request.Forms.BindAsync&lt;T&gt;()</code></li>
+                        <li>Structured field errors</li>
+                        <li>Sections, grid spans, hidden/read-only fields, provider-backed select fields, and async autocomplete search</li>
+                        <li>File size, content type, extension, and image dimension checks</li>
+                    </ul>
+                </div>
+                <div class="glass-card p-3 rounded-4 mt-3">
+                    <p class="fw-semibold mb-2">Schema and render source</p>
+                    <p class="mb-0 text-secondary">The page embeds a client schema generated from the same C# model the server renders, binds, and validates. The favorite-color options are overridden by the server at render time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script id="starter-profile-form-schema" type="application/json">
+{raw:model:form_schema_json}
+</script>

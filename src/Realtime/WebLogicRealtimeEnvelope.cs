@@ -27,7 +27,8 @@ public enum WebLogicRealtimeAudience
     Public = 0,
     Authenticated = 1,
     AccessGroup = 2,
-    Internal = 3
+    Internal = 3,
+    User = 4
 }
 
 public sealed record WebLogicRealtimeEnvelope
@@ -40,6 +41,7 @@ public sealed record WebLogicRealtimeEnvelope
     public string? Message { get; init; }
     public WebLogicRealtimeAudience Audience { get; init; } = WebLogicRealtimeAudience.Public;
     public IReadOnlyList<string> AccessGroups { get; init; } = [];
+    public IReadOnlyList<string> Users { get; init; } = [];
     public string? CorrelationId { get; init; }
     public object? Payload { get; init; }
     public IReadOnlyDictionary<string, object?> Properties { get; init; } = new ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>());
@@ -52,6 +54,7 @@ public sealed record WebLogicRealtimeEnvelope
         object? payload = null,
         WebLogicRealtimeAudience audience = WebLogicRealtimeAudience.Public,
         IEnumerable<string>? accessGroups = null,
+        IEnumerable<string>? users = null,
         string? correlationId = null,
         IReadOnlyDictionary<string, object?>? properties = null,
         DateTimeOffset? timestampUtc = null,
@@ -68,6 +71,7 @@ public sealed record WebLogicRealtimeEnvelope
             Payload = payload,
             Audience = audience,
             AccessGroups = NormalizeStrings(accessGroups),
+            Users = NormalizeStrings(users),
             CorrelationId = string.IsNullOrWhiteSpace(correlationId) ? null : correlationId.Trim(),
             Properties = properties ?? new ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>())
         };
@@ -83,6 +87,7 @@ public sealed record WebLogicRealtimeEnvelope
         Message = Message,
         Audience = Audience,
         AccessGroups = AccessGroups,
+        Users = Users,
         CorrelationId = CorrelationId,
         Payload = Payload,
         Properties = Properties
@@ -111,6 +116,7 @@ public sealed record WebLogicRealtimeHubMessage
     public string? Message { get; init; }
     public WebLogicRealtimeAudience Audience { get; init; }
     public IReadOnlyList<string> AccessGroups { get; init; } = [];
+    public IReadOnlyList<string> Users { get; init; } = [];
     public string? CorrelationId { get; init; }
     public object? Payload { get; init; }
     public IReadOnlyDictionary<string, object?> Properties { get; init; } = new ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>());
@@ -123,6 +129,7 @@ public sealed record WebLogicRealtimeHubMessage
         Payload,
         Audience,
         AccessGroups,
+        Users,
         CorrelationId,
         Properties,
         TimestampUtc,

@@ -1,139 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{title}}</title>
-    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-    <div class="site-shell">
-        <nav class="navbar navbar-expand-lg navbar-dark px-3 py-3 site-navbar">
-            <div class="container-fluid px-0">
-                <a class="navbar-brand text-white text-decoration-none" href="/">
-                    <div class="brand-mark">
-                        <span class="brand-badge">CL</span>
-                        <div>
-                            <p class="brand-name">CL.WebLogic Starter</p>
-                            <p class="brand-subtitle">Plugin showcase and RBAC demo</p>
-                        </div>
-                    </div>
-                </a>
-                <div class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-                    <a class="nav-link text-white-50" href="/">Home</a>
-                    <a class="nav-link text-white-50" href="/about">About</a>
-                    <a class="nav-link text-white-50" href="/rbac">RBAC</a>
-                    <a class="nav-link text-white-50" href="/weblogic/apiexplorer">API Explorer</a>
-                </div>
-            </div>
-        </nav>
+{layout:layouts/main}
 
-        <section class="hero-panel">
-            <div class="row g-4 align-items-center">
-                <div class="col-lg-8">
-                    <p class="eyebrow">{{badge}}</p>
-                    <h1 class="hero-title">{{title}}</h1>
-                    <p class="hero-copy">{{description}}</p>
-                    <p class="hero-copy">The page route came from a plugin, but it still uses the same shared theme assets and template folder.</p>
-                    <div class="hero-actions">
-                        <a class="btn btn-warning fw-semibold" href="{{links}}">Plugin manifest API</a>
-                        <a class="btn btn-outline-light" href="/login">Login page</a>
-                        <a class="btn btn-outline-light" href="/api/plugins/secure">Secure API</a>
-                        <a class="btn btn-outline-light" href="/api/plugins/message?name=WebLogic">Message API</a>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="demo-panel">
-                        <p class="section-title">Plugin context</p>
-                        <div class="mt-3">
-                            <p class="mb-2">User: <code>{{user_id}}</code></p>
-                            <p class="mb-2">Access groups: <code>{{access_groups}}</code></p>
-                            <p class="mb-0">The theme can render or hide blocks based on access groups.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+{section:hero}
+<div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+        <p class="eyebrow">{model:page_eyebrow}</p>
+        <h1 class="hero-title">{model:hero_title}</h1>
+        <p class="hero-copy">{model:hero_copy}</p>
+        <p class="hero-copy">The page route came from a plugin, but it still uses the same shared layout, assets, and request-aware template features.</p>
+        <div class="hero-actions">
+            <a class="btn btn-warning fw-semibold" href="{model:links}">Plugin manifest API</a>
+            <a class="btn btn-outline-light" href="/login">Login page</a>
+            <a class="btn btn-outline-light" href="/api/plugins/secure">Secure API</a>
+            <a class="btn btn-outline-light" href="/api/plugins/message?name=WebLogic">Message API</a>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        {widget:starter.request-glance title="Plugin request"}
+    </div>
+</div>
+{/section}
 
-        <section class="section-wrap">
-            <div class="row g-4">
-                <div class="col-lg-7">
-                    <div class="demo-panel h-100">
-                        <div class="section-header">
-                            <div>
-                                <h2 class="section-title">Plugin highlights</h2>
-                                <p class="section-subtitle">A plugin can contribute both APIs and pages while staying visually native to the app.</p>
-                            </div>
-                            <span class="badge rounded-pill badge-soft-green">Plugin-owned route</span>
-                        </div>
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 rounded-4 h-100">
-                                    <p class="mb-2 fw-semibold">Shared rendering</p>
-                                    <p class="mb-0">The plugin page is rendered with the same runtime theme as the core site pages.</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 rounded-4 h-100">
-                                    <p class="mb-2 fw-semibold">Request context</p>
-                                    <p class="mb-0">Form data, query string data, and user context are available to plugins directly.</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 rounded-4 h-100">
-                                    <p class="mb-2 fw-semibold">RBAC gate</p>
-                                    <p class="mb-0">The admin-only panel below is controlled by the theme auth block syntax.</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 rounded-4 h-100">
-                                    <p class="mb-2 fw-semibold">Future realtime</p>
-                                    <p class="mb-0">This page is laid out to make a SignalR live status rail easy to slot in later.</p>
-                                </div>
-                            </div>
-                        </div>
+<section class="section-wrap">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            {widget:plugin.feature-callout title="Plugin-owned widget" description="This widget was registered by the plugin and resolved through the same theme engine as the application widgets."}
+        </div>
+        <div class="col-lg-5">
+            <div class="demo-panel h-100">
+                <p class="section-title">Access note</p>
+                <p class="section-subtitle">The admin-only block renders only when the current request has the <code>admin</code> access group.</p>
+                {if:accessgroup:admin}
+                <div class="auth-gate mt-3">
+                    <div class="glass-card p-3 rounded-4">
+                        <p class="mb-2 text-uppercase small text-secondary">Admin-only content</p>
+                        <p class="mb-0">This block is visible because the current request context has the <code>admin</code> access group.</p>
                     </div>
                 </div>
-                <div class="col-lg-5">
-                    <div class="demo-panel h-100">
-                        <p class="section-title">Access note</p>
-                        <p class="section-subtitle">The admin-only block renders only when the current request has the <code>admin</code> access group.</p>
-                        {page:auth:requireaccessgroup:admin}
-                        <div class="auth-gate mt-3">
-                            <div class="glass-card p-3 rounded-4">
-                                <p class="mb-2 text-uppercase small text-secondary">Admin-only content</p>
-                                <p class="mb-0">This block is visible because the current request context has the <code>admin</code> access group.</p>
-                            </div>
-                        </div>
-                        {/page:auth}
-                        <div class="code-shell mt-3">
+                {/if}
+                {ifnot:accessgroup:admin}
+                <div class="auth-gate mt-3">
+                    <p class="mb-0">You are not in the <code>admin</code> group, so the protected plugin block stays hidden.</p>
+                </div>
+                {/ifnot}
+                <div class="code-shell mt-3">
 <pre class="mb-0"><code>GET /api/plugins/manifest
 GET /api/plugins/message?name=Claus
 GET /api/plugins/secure</code></pre>
-                        </div>
-                    </div>
                 </div>
             </div>
-        </section>
-
-        <section class="section-wrap">
-            <div class="hero-actions">
-                <a class="btn btn-warning fw-semibold" href="/">Back home</a>
-                <a class="btn btn-outline-light" href="/api/plugins/manifest">Plugin manifest</a>
-                <a class="btn btn-outline-light" href="/weblogic/apiexplorer">API explorer</a>
-            </div>
-        </section>
-
-        <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
-            <span>Plugin pages are first-class citizens in the shared theme.</span>
-            <span data-current-year></span>
-        </footer>
+        </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@9.0.6/dist/browser/signalr.min.js"></script>
-    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
-    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="/assets/site.js"></script>
-</body>
-</html>
+</section>
