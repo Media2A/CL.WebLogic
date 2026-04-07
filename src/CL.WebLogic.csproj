@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Client\weblogic.client.js" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\CodeLogic\src\CodeLogic.csproj" />
     <ProjectReference Include="..\..\CodeLogic.Libs\CL.Common\CL.Common.csproj" />
     <ProjectReference Include="..\..\CodeLogic.Libs\CL.GitHelper\CL.GitHelper.csproj" />

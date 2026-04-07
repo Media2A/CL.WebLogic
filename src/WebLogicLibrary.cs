@@ -11,6 +11,7 @@ using CodeLogic;
 using CodeLogic.Framework.Application;
 using CodeLogic.Framework.Application.Plugins;
 using CodeLogic.Framework.Libraries;
+using System.Reflection;
 using System.Text.Json;
 
 namespace CL.WebLogic;
@@ -338,6 +339,15 @@ public sealed class WebLogicLibrary : ILibrary
                 .Where(static route => string.Equals(route.Kind, nameof(WebRouteKind.Api), StringComparison.OrdinalIgnoreCase))
                 .ToArray()
         })), "GET");
+
+        explorerContributor.RegisterApi("/weblogic/client/weblogic.client.js", new WebRouteOptions
+        {
+            Name = "WebLogic Client Runtime",
+            Description = "Serves the CL.WebLogic.Client browser runtime owned by the library itself.",
+            Tags = ["weblogic", "client", "assets"]
+        }, _ => Task.FromResult(WebResult.Bytes(
+            LoadEmbeddedClientRuntime(),
+            "application/javascript; charset=utf-8")), "GET");
 
         explorerContributor.RegisterApi("/api/weblogic/forms/options", new WebRouteOptions
         {
@@ -1247,6 +1257,23 @@ public sealed class WebLogicLibrary : ILibrary
             </body>
             </html>
             """;
+    }
+
+    private static byte[] LoadEmbeddedClientRuntime()
+    {
+        var assembly = typeof(WebLogicLibrary).Assembly;
+        var resourceName = assembly
+            .GetManifestResourceNames()
+            .FirstOrDefault(static name => name.EndsWith("Client.weblogic.client.js", StringComparison.OrdinalIgnoreCase));
+
+        if (string.IsNullOrWhiteSpace(resourceName))
+            throw new InvalidOperationException("The embedded CL.WebLogic client runtime could not be found.");
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException("The embedded CL.WebLogic client runtime stream could not be opened.");
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
     }
 
     private static string BuildAuthDemoHtml(WebRequestContext request)
