@@ -25,6 +25,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: CL.WebLogic
+
+      - name: Checkout CodeLogic
+        uses: actions/checkout@v4
+        with:
+          repository: Media2A/CodeLogic
+          path: CodeLogic
+
+      - name: Checkout CodeLogic.Libs
+        uses: actions/checkout@v4
+        with:
+          repository: Media2A/CodeLogic.Libs
+          path: CodeLogic.Libs
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
@@ -35,15 +49,15 @@ jobs:
         run: dotnet tool install -g docfx
 
       - name: Build project (generates XML docs)
-        run: dotnet build src/CL.WebLogic.csproj --configuration Release
+        run: dotnet build CL.WebLogic/src/CL.WebLogic.csproj --configuration Release
 
       - name: Build documentation
-        run: docfx docs/docfx.json
+        run: docfx CL.WebLogic/docs/docfx.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs-output
+          path: CL.WebLogic/docs-output
 
   deploy:
     environment:
