@@ -1,7 +1,6 @@
 using CL.Common.Caching;
 using CL.WebLogic.Configuration;
 using CL.WebLogic.Forms;
-using CL.WebLogic.MySql;
 using CL.WebLogic.Realtime;
 using CL.WebLogic.Routing;
 using CL.WebLogic.Runtime;
@@ -18,6 +17,8 @@ namespace CL.WebLogic;
 
 public sealed class WebLogicLibrary : ILibrary
 {
+    private readonly HashSet<string> _registeredPluginContributorIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _pluginRegistrationLock = new();
     public LibraryManifest Manifest { get; } = new()
     {
         Id = "CL.WebLogic",
@@ -31,6 +32,11 @@ public sealed class WebLogicLibrary : ILibrary
     private MemoryCache? _cache;
     private IWebAuthResolver? _authResolver;
     private ThemeManager? _themeManager;
+    private PluginManager? _attachedPluginManager;
+    private IWebIdentityStore? _configuredIdentityStore;
+    private IWebDashboardLayoutStore? _configuredDashboardLayouts;
+    private IWebRequestAuditStore? _configuredAuditStore;
+    private WebLogicConfig? _resolvedConfig;
     public IWebWidgetSettingsStore? WidgetSettingsStore { get; private set; }
     public IWebIdentityStore? IdentityStore { get; private set; }
     public IWebDashboardLayoutStore? DashboardLayouts { get; private set; }
@@ -56,6 +62,7 @@ public sealed class WebLogicLibrary : ILibrary
     public async Task OnInitializeAsync(LibraryContext context)
     {
         var config = context.Configuration.Get<WebLogicConfig>();
+        _resolvedConfig = config;
         var validation = config.Validate();
         if (!validation.IsValid)
         {
@@ -65,21 +72,8 @@ public sealed class WebLogicLibrary : ILibrary
 
         _cache = new MemoryCache(TimeSpan.FromSeconds(30));
 
-        IWebIdentityStore? identityStore = null;
-        IWebDashboardLayoutStore? dashboardLayouts = null;
-        if (config.Auth.Mode == WebAuthMode.MySql && config.Auth.MySql.Enabled)
-        {
-            var mySqlStore = new WebMySqlIdentityStore(context, config);
-            await mySqlStore.InitializeAsync().ConfigureAwait(false);
-            identityStore = mySqlStore;
-
-            var dashboardStore = new WebMySqlDashboardLayoutStore(config.Auth.MySql.ConnectionId);
-            await dashboardStore.InitializeAsync().ConfigureAwait(false);
-            dashboardLayouts = dashboardStore;
-        }
-
-        IdentityStore = identityStore;
-        DashboardLayouts = dashboardLayouts;
+        IdentityStore = _configuredIdentityStore;
+        DashboardLayouts = _configuredDashboardLayouts ?? new FileWebDashboardLayoutStore(context);
 
         IWebWidgetSettingsStore? widgetSettingsStore = config.Widgets.EnablePersistentSettings
             ? new FileWebWidgetSettingsStore(context, config)
@@ -90,14 +84,15 @@ public sealed class WebLogicLibrary : ILibrary
         var themeManager = new ThemeManager(context, config, Widgets, widgetSettingsStore);
         _themeManager = themeManager;
         var authResolver = _authResolver is null || _authResolver is DefaultWebAuthResolver
-            ? new DefaultWebAuthResolver(config.Auth, identityStore)
+            ? new DefaultWebAuthResolver(config.Auth, IdentityStore)
             : _authResolver;
 
         RealtimeBridge = new WebLogicRealtimeBridge(new WebLogicRealtimeBuffer());
         RealtimeBridge.RegisterDefaultMappings(context.Events);
 
         var security = new WebSecurityService(context, config, authResolver);
-        var auditStore = new WebRequestAuditStore(context, config);
+        themeManager.SetSecurityService(security);
+        var auditStore = _configuredAuditStore ?? NullWebRequestAuditStore.Instance;
 
         Runtime = new WebLogicRuntime(
             context,
@@ -107,6 +102,7 @@ public sealed class WebLogicLibrary : ILibrary
             security,
             auditStore);
 
+        Registration.SetRuntime(Runtime);
         RegisterBuiltInExplorerRoutes();
         await Runtime.InitializeAsync().ConfigureAwait(false);
     }
@@ -161,6 +157,23 @@ public sealed class WebLogicLibrary : ILibrary
         _authResolver = authResolver ?? throw new ArgumentNullException(nameof(authResolver));
     }
 
+    public void UseIdentityStore(IWebIdentityStore identityStore)
+    {
+        _configuredIdentityStore = identityStore ?? throw new ArgumentNullException(nameof(identityStore));
+        IdentityStore = identityStore;
+    }
+
+    public void UseDashboardLayoutStore(IWebDashboardLayoutStore dashboardLayoutStore)
+    {
+        _configuredDashboardLayouts = dashboardLayoutStore ?? throw new ArgumentNullException(nameof(dashboardLayoutStore));
+        DashboardLayouts = dashboardLayoutStore;
+    }
+
+    public void UseRequestAuditStore(IWebRequestAuditStore auditStore)
+    {
+        _configuredAuditStore = auditStore ?? throw new ArgumentNullException(nameof(auditStore));
+    }
+
     public WebRegistrationContext CreateApplicationContext(ApplicationManifest manifest) =>
         Registration.CreateContext(new WebContributorDescriptor
         {
@@ -183,6 +196,32 @@ public sealed class WebLogicLibrary : ILibrary
     {
         var context = Registration.CreateContext(contributor);
         await routeContributor.RegisterRoutesAsync(context).ConfigureAwait(false);
+    }
+
+    public async Task RegisterLoadedPluginsAsync(PluginManager? pluginManager = null)
+    {
+        pluginManager ??= CodeLogic.CodeLogic.GetPluginManager();
+        if (pluginManager is null)
+            return;
+
+        AttachPluginManager(pluginManager);
+
+        foreach (var plugin in pluginManager.GetAllPlugins())
+            await RegisterPluginContributorAsync(plugin).ConfigureAwait(false);
+    }
+
+    public void AttachPluginManager(PluginManager pluginManager)
+    {
+        ArgumentNullException.ThrowIfNull(pluginManager);
+
+        if (ReferenceEquals(_attachedPluginManager, pluginManager))
+            return;
+
+        if (_attachedPluginManager is not null)
+            _attachedPluginManager.OnPluginLoaded -= HandlePluginLoaded;
+
+        _attachedPluginManager = pluginManager;
+        _attachedPluginManager.OnPluginLoaded += HandlePluginLoaded;
     }
 
     public void RegisterPage(string path, WebRouteHandler handler, params string[] methods) =>
@@ -216,6 +255,50 @@ public sealed class WebLogicLibrary : ILibrary
     public static WebLogicLibrary GetRequired() =>
         Libraries.Get<WebLogicLibrary>()
         ?? throw new InvalidOperationException("CL.WebLogic is not loaded.");
+
+    public WebLogicConfig? GetConfig() => _resolvedConfig;
+
+    private async void HandlePluginLoaded(string pluginId)
+    {
+        try
+        {
+            var plugin = _attachedPluginManager?
+                .GetAllPlugins()
+                .FirstOrDefault(candidate => string.Equals(candidate.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+
+            if (plugin is not null)
+                await RegisterPluginContributorAsync(plugin).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Keep plugin-load event handling non-fatal for the host.
+        }
+    }
+
+    private async Task RegisterPluginContributorAsync(IPlugin plugin)
+    {
+        if (plugin is not IWebRouteContributor routeContributor)
+            return;
+
+        var contributor = CreatePluginContext(plugin.Manifest).Contributor;
+
+        lock (_pluginRegistrationLock)
+        {
+            if (!_registeredPluginContributorIds.Add(contributor.Id))
+                return;
+        }
+
+        try
+        {
+            await RegisterContributorAsync(contributor, routeContributor).ConfigureAwait(false);
+        }
+        catch
+        {
+            lock (_pluginRegistrationLock)
+                _registeredPluginContributorIds.Remove(contributor.Id);
+            throw;
+        }
+    }
 
     public Task<WebDashboardLayoutRecord?> GetDashboardLayoutAsync(
         string ownerKey,

@@ -17,7 +17,19 @@ public sealed partial class StarterWebsiteApplication
         if (web.IdentityStore is IWebCredentialValidator credentialValidator)
             return await credentialValidator.ValidateCredentialsAsync(userId, password).ConfigureAwait(false);
 
-        return null;
+        var matchedUser = _config.DemoUsers.FirstOrDefault(user =>
+            string.Equals(user.UserId, userId, StringComparison.OrdinalIgnoreCase));
+
+        if (matchedUser is null || !string.Equals(matchedUser.Password, password, StringComparison.Ordinal))
+            return null;
+
+        return new WebIdentityProfile
+        {
+            UserId = matchedUser.UserId,
+            DisplayName = matchedUser.DisplayName,
+            IsActive = true,
+            AccessGroups = matchedUser.AccessGroups.ToList()
+        };
     }
 
     private Dictionary<string, object?> BuildLoginModel(string returnUrl, string message, bool isError)
@@ -55,8 +67,8 @@ public sealed partial class StarterWebsiteApplication
         new { Label = "Template lab", Url = "/template-lab", Description = "Layouts, widgets, loops, and page scripts" },
         new { Label = "Form lab", Url = "/form-lab", Description = "C# forms, client validation, uploads, and lookups" },
         new { Label = "Dashboard", Url = "/dashboard", Description = "AJAX-loaded widget dashboard demo" },
-        new { Label = "Dashboard studio", Url = "/dashboard/studio", Description = "Per-user saved dashboard builder" },
-        new { Label = "Login", Url = "/login", Description = "MySQL-backed starter auth flow" },
+        new { Label = "Dashboard studio", Url = "/dashboard/studio", Description = "Per-user dashboard builder backed by app-owned JSON storage" },
+        new { Label = "Login", Url = "/login", Description = "Configured starter auth flow" },
         new { Label = "RBAC hub", Url = "/rbac", Description = "Access-group demo pages" },
         new { Label = "Plugin showcase", Url = "/plugins/theme-showcase", Description = "Plugin route rendered in the same shell" },
         new { Label = "API explorer", Url = "/weblogic/apiexplorer", Description = "Built-in WebLogic discovery page" }
@@ -122,9 +134,6 @@ public sealed partial class StarterWebsiteApplication
             TextBody = $"""<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(location)}"></head><body>Redirecting to <a href="{System.Net.WebUtility.HtmlEncode(location)}">{System.Net.WebUtility.HtmlEncode(location)}</a>...</body></html>"""
         };
     }
-
-    private static string BuildEmail(string userId) =>
-        $"{userId}@starter.local";
 
     private static WebPageMeta CreateMeta(
         WebRequestContext request,

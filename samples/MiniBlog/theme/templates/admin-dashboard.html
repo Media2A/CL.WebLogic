@@ -1,0 +1,20 @@
+{layout:layouts/main}
+
+<section class="admin-surface">
+    <div class="admin-surface__main">
+        <div class="admin-card admin-card--wide">
+            <h3>Latest entries</h3>
+            <div class="admin-list">
+                {foreach:model:posts}
+                    <a class="admin-list__item" href="/admin/posts/edit/{item:Id}">
+                        <span>{item:Title}</span>
+                        <span class="status-pill">{item:Status}</span>
+                    </a>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    <aside class="admin-surface__side">
+        {widget:admin.editor-summary}
+    </aside>
+</section>

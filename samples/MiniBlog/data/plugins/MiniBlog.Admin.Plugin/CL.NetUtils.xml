@@ -1,0 +1,314 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CL.NetUtils</name>
+    </assembly>
+    <members>
+        <member name="T:CL.NetUtils.Localization.NetUtilsStrings">
+            <summary>
+            Localized string resources for the CL.NetUtils library.
+            </summary>
+        </member>
+        <member name="T:CL.NetUtils.Models.NetUtilsConfig">
+            <summary>
+            Main configuration model for the CL.NetUtils library.
+            Serialized as <c>config.netutils.json</c> in the library's config directory.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.NetUtilsConfig.Enabled">
+            <summary>Whether the NetUtils library is enabled.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.NetUtilsConfig.Dnsbl">
+            <summary>DNSBL blacklist-checking configuration.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.NetUtilsConfig.GeoIp">
+            <summary>IP geolocation (GeoIP) configuration.</summary>
+        </member>
+        <member name="M:CL.NetUtils.Models.NetUtilsConfig.Validate">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.NetUtils.Models.DnsblConfig">
+            <summary>
+            Configuration for DNS blacklist (DNSBL) checking.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.Enabled">
+            <summary>Whether DNSBL checking is enabled.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.Ipv4Services">
+            <summary>Primary DNSBL services to query for IPv4 addresses.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.Ipv4FallbackServices">
+            <summary>Fallback DNSBL services for IPv4 addresses.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.Ipv6Services">
+            <summary>Primary DNSBL services to query for IPv6 addresses.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.Ipv6FallbackServices">
+            <summary>Fallback DNSBL services for IPv6 addresses.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.TimeoutSeconds">
+            <summary>DNS query timeout in seconds.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.ParallelQueries">
+            <summary>Whether to run DNSBL queries in parallel.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblConfig.DetailedLogging">
+            <summary>Whether to enable detailed per-service logging.</summary>
+        </member>
+        <member name="T:CL.NetUtils.Models.GeoIpConfig">
+            <summary>
+            Configuration for IP geolocation using the MaxMind GeoIP2 database.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.Enabled">
+            <summary>Whether the GeoIP service is enabled.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.DatabasePath">
+            <summary>
+            Explicit path to the <c>.mmdb</c> database file.
+            When empty the path is resolved automatically from the library data directory.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.AutoUpdate">
+            <summary>Whether to automatically download/update the database on startup.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.AccountId">
+            <summary>MaxMind account ID used for authenticated downloads.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.LicenseKey">
+            <summary>MaxMind license key used for authenticated downloads.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.DownloadUrl">
+            <summary>URL used to download the GeoIP database archive.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.DatabaseType">
+            <summary>MaxMind database type (e.g. <c>GeoLite2-City</c>).</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.GeoIpConfig.TimeoutSeconds">
+            <summary>HTTP download timeout in seconds.</summary>
+        </member>
+        <member name="T:CL.NetUtils.Models.IpAddressType">
+            <summary>
+            IP address protocol family.
+            </summary>
+        </member>
+        <member name="F:CL.NetUtils.Models.IpAddressType.IPv4">
+            <summary>IPv4 address (e.g. 192.168.1.1).</summary>
+        </member>
+        <member name="F:CL.NetUtils.Models.IpAddressType.IPv6">
+            <summary>IPv6 address (e.g. 2001:db8::1).</summary>
+        </member>
+        <member name="F:CL.NetUtils.Models.IpAddressType.Unknown">
+            <summary>Address type could not be determined.</summary>
+        </member>
+        <member name="T:CL.NetUtils.Models.DnsblCheckResult">
+            <summary>
+            Result of a DNSBL blacklist check for a single IP address.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblCheckResult.IpAddress">
+            <summary>The IP address that was checked.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblCheckResult.IsBlacklisted">
+            <summary>Whether the IP address was found on at least one blacklist.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblCheckResult.MatchedService">
+            <summary>The DNSBL service that matched, or <see langword="null"/> when not blacklisted.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblCheckResult.AddressType">
+            <summary>Protocol family of the checked address.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblCheckResult.ErrorMessage">
+            <summary>Error message when the check itself failed; <see langword="null"/> on success.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.DnsblCheckResult.CheckedAt">
+            <summary>UTC timestamp of when the check was performed.</summary>
+        </member>
+        <member name="M:CL.NetUtils.Models.DnsblCheckResult.Blacklisted(System.String,CL.NetUtils.Models.IpAddressType,System.String)">
+            <summary>Creates a result indicating the IP is blacklisted by the given service.</summary>
+        </member>
+        <member name="M:CL.NetUtils.Models.DnsblCheckResult.NotBlacklisted(System.String,CL.NetUtils.Models.IpAddressType)">
+            <summary>Creates a result indicating the IP passed all blacklist checks.</summary>
+        </member>
+        <member name="M:CL.NetUtils.Models.DnsblCheckResult.Error(System.String,CL.NetUtils.Models.IpAddressType,System.String)">
+            <summary>Creates an error result when the check could not be completed.</summary>
+        </member>
+        <member name="T:CL.NetUtils.Models.IpLocationResult">
+            <summary>
+            Result of an IP geolocation lookup.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.IpAddress">
+            <summary>The IP address that was looked up.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.CountryName">
+            <summary>Full country name, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.CountryCode">
+            <summary>ISO 3166-1 alpha-2 country code, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.CityName">
+            <summary>City name, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.SubdivisionName">
+            <summary>State / province / subdivision name, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.PostalCode">
+            <summary>Postal / ZIP code, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.Latitude">
+            <summary>Geographic latitude, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.Longitude">
+            <summary>Geographic longitude, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.TimeZone">
+            <summary>IANA time zone identifier (e.g. <c>Europe/Copenhagen</c>), or <see langword="null"/>.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.Isp">
+            <summary>ISP / organization name, or <see langword="null"/> when unavailable.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.ErrorMessage">
+            <summary>Error message when the lookup failed; <see langword="null"/> on success.</summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.IsSuccessful">
+            <summary>
+            <see langword="true"/> when the lookup succeeded and country information is available.
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.Models.IpLocationResult.LookedUpAt">
+            <summary>UTC timestamp of when the lookup was performed.</summary>
+        </member>
+        <member name="M:CL.NetUtils.Models.IpLocationResult.NotFound(System.String,System.String)">
+            <summary>Creates a result indicating the IP was not found in the database.</summary>
+        </member>
+        <member name="M:CL.NetUtils.Models.IpLocationResult.Error(System.String,System.String)">
+            <summary>Creates an error result when the lookup could not be completed.</summary>
+        </member>
+        <member name="T:CL.NetUtils.NetUtilsLibrary">
+            <summary>
+            <b>CL.NetUtils</b> — CodeLogic library providing DNSBL blacklist checking
+            and IP geolocation via the MaxMind GeoIP2 database.
+            <para>
+            Lifecycle:
+            <list type="number">
+              <item><description><b>Configure</b> — registers <see cref="T:CL.NetUtils.Models.NetUtilsConfig"/> and <see cref="T:CL.NetUtils.Localization.NetUtilsStrings"/>.</description></item>
+              <item><description><b>Initialize</b> — loads config, creates <see cref="T:CL.NetUtils.Services.DnsblChecker"/> and optionally <see cref="T:CL.NetUtils.Services.GeoIpService"/>.</description></item>
+              <item><description><b>Start</b> — logs that the library is ready.</description></item>
+              <item><description><b>Stop</b> — disposes the <see cref="T:CL.NetUtils.Services.GeoIpService"/> database reader.</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.NetUtils.NetUtilsLibrary.Manifest">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.NetUtils.NetUtilsLibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.NetUtils.NetUtilsLibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.NetUtils.NetUtilsLibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.NetUtils.NetUtilsLibrary.OnStopAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.NetUtils.NetUtilsLibrary.HealthCheckAsync">
+            <inheritdoc/>
+        </member>
+        <member name="P:CL.NetUtils.NetUtilsLibrary.Dnsbl">
+            <summary>
+            The DNSBL checker service.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown when the library has not been initialized or is disabled.
+            </exception>
+        </member>
+        <member name="P:CL.NetUtils.NetUtilsLibrary.GeoIp">
+            <summary>
+            The GeoIP lookup service.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown when the GeoIP service is not available (database absent, not configured, or disabled).
+            </exception>
+        </member>
+        <member name="P:CL.NetUtils.NetUtilsLibrary.HasGeoIp">
+            <summary>
+            <see langword="true"/> when the GeoIP service has been successfully initialized.
+            </summary>
+        </member>
+        <member name="M:CL.NetUtils.NetUtilsLibrary.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.NetUtils.Services.DnsblChecker">
+            <summary>
+            Checks IP addresses against DNS-based blacklists (DNSBLs).
+            Supports both IPv4 and IPv6 addresses, primary and fallback service lists.
+            </summary>
+        </member>
+        <member name="M:CL.NetUtils.Services.DnsblChecker.#ctor(CL.NetUtils.Models.DnsblConfig,CodeLogic.Core.Logging.ILogger)">
+            <summary>
+            Initializes a new <see cref="T:CL.NetUtils.Services.DnsblChecker"/>.
+            </summary>
+            <param name="config">DNSBL configuration.</param>
+            <param name="logger">Optional logger; pass <see langword="null"/> to suppress logging.</param>
+        </member>
+        <member name="M:CL.NetUtils.Services.DnsblChecker.CheckIpAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Checks whether <paramref name="ipAddress"/> appears on any configured DNSBL.
+            Local/private addresses are skipped and returned as <em>not blacklisted</em>.
+            </summary>
+            <param name="ipAddress">The IP address string to check (IPv4 or IPv6).</param>
+            <param name="cancellationToken">Optional cancellation token.</param>
+            <returns>A <see cref="T:CL.NetUtils.Models.DnsblCheckResult"/> describing the outcome.</returns>
+        </member>
+        <member name="T:CL.NetUtils.Services.GeoIpService">
+            <summary>
+            Provides IP geolocation using the MaxMind GeoIP2 / GeoLite2 database.
+            Supports automatic download of the database when credentials are configured.
+            </summary>
+        </member>
+        <member name="M:CL.NetUtils.Services.GeoIpService.#ctor(CL.NetUtils.Models.GeoIpConfig,CodeLogic.Core.Logging.ILogger,System.String)">
+            <summary>
+            Initializes a new <see cref="T:CL.NetUtils.Services.GeoIpService"/>.
+            </summary>
+            <param name="config">GeoIP configuration.</param>
+            <param name="logger">Optional logger.</param>
+            <param name="dataDirectory">
+            Library data directory used to resolve the database path when
+            <see cref="P:CL.NetUtils.Models.GeoIpConfig.DatabasePath"/> is not set.
+            </param>
+        </member>
+        <member name="M:CL.NetUtils.Services.GeoIpService.InitializeAsync(System.Threading.CancellationToken)">
+            <summary>
+            Ensures the database file exists (downloading it when needed and permitted),
+            then opens the <see cref="T:MaxMind.GeoIP2.DatabaseReader"/>.
+            </summary>
+            <param name="cancellationToken">Optional cancellation token.</param>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown when the database file is absent and could not be obtained.
+            </exception>
+        </member>
+        <member name="M:CL.NetUtils.Services.GeoIpService.LookupIpAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Looks up geolocation information for the given IP address.
+            </summary>
+            <param name="ipAddress">IPv4 or IPv6 address string.</param>
+            <param name="cancellationToken">Optional cancellation token (reserved for future async lookup).</param>
+            <returns>An <see cref="T:CL.NetUtils.Models.IpLocationResult"/> with location data or an error description.</returns>
+        </member>
+        <member name="M:CL.NetUtils.Services.GeoIpService.DownloadDatabaseAsync(System.Threading.CancellationToken)">
+            <summary>
+            Downloads and extracts the MaxMind database archive using the configured credentials.
+            Does nothing (logs a warning) when account credentials are absent.
+            </summary>
+            <param name="cancellationToken">Optional cancellation token.</param>
+        </member>
+        <member name="M:CL.NetUtils.Services.GeoIpService.Dispose">
+            <inheritdoc/>
+        </member>
+    </members>
+</doc>

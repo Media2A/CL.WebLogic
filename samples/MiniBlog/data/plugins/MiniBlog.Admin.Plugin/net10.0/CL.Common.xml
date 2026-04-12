@@ -1,0 +1,1435 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CL.Common</name>
+    </assembly>
+    <members>
+        <member name="T:CL.Common.Assemblies.AssemblyHelper">
+            <summary>
+            Provides reflection-based utilities for inspecting assemblies and their metadata.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetName(System.Object)">
+            <summary>Returns the name of the assembly containing <paramref name="obj"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetVersion(System.Object)">
+            <summary>Returns the version of the assembly containing <paramref name="obj"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetDescription(System.Object)">
+            <summary>Returns the <see cref="T:System.Reflection.AssemblyDescriptionAttribute"/> value, or empty string.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetTitle(System.Object)">
+            <summary>Returns the <see cref="T:System.Reflection.AssemblyTitleAttribute"/> value, or empty string.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetCompany(System.Object)">
+            <summary>Returns the <see cref="T:System.Reflection.AssemblyCompanyAttribute"/> value, or empty string.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetProduct(System.Object)">
+            <summary>Returns the <see cref="T:System.Reflection.AssemblyProductAttribute"/> value, or empty string.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetInformationalVersion(System.Object)">
+            <summary>Returns the <see cref="T:System.Reflection.AssemblyInformationalVersionAttribute"/> value, or the version string.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetMetadata(System.Object)">
+            <summary>
+            Returns a dictionary containing key assembly metadata for the given object's assembly.
+            Keys: Name, Version, InformationalVersion, Description, Title, Company, Product.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.LoadFrom(System.String)">
+            <summary>
+            Loads an assembly from the given file path.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetFileMetadata(System.String)">
+            <summary>
+            Loads an assembly from the given file and returns metadata about it.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetImplementors``1(System.Reflection.Assembly)">
+            <summary>
+            Returns all types in an assembly that implement or inherit from <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.GetTypesWithAttribute``1(System.Reflection.Assembly)">
+            <summary>Returns all public classes in an assembly decorated with <typeparamref name="TAttr"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.AssemblyHelper.ReadEmbeddedResource(System.Reflection.Assembly,System.String)">
+            <summary>
+            Reads an embedded resource from an assembly as a string.
+            </summary>
+            <param name="assembly">The assembly containing the resource.</param>
+            <param name="resourceName">The fully-qualified resource name (e.g. "MyLib.Resources.template.html").</param>
+        </member>
+        <member name="T:CL.Common.Assemblies.ReflectionHelper">
+            <summary>
+            Provides reflection utilities for inspecting types, creating instances,
+            and invoking methods dynamically.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.CreateInstance``1">
+            <summary>
+            Creates an instance of <typeparamref name="T"/> using its parameterless constructor.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.CreateInstance(System.Type,System.Object[])">
+            <summary>Creates an instance of the given type with optional constructor arguments.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.GetPropertyValue(System.Object,System.String)">
+            <summary>Gets a property value by name using reflection.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.SetPropertyValue(System.Object,System.String,System.Object)">
+            <summary>Sets a property value by name using reflection.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.ToDictionary``1(``0)">
+            <summary>Returns all public instance properties of <typeparamref name="T"/> as a name → value dictionary.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.InvokeMethod(System.Object,System.String,System.Object[])">
+            <summary>Invokes a public instance method by name with optional arguments.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.Implements``1(System.Type)">
+            <summary>Returns true if <paramref name="type"/> implements <typeparamref name="TInterface"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.HasDefaultConstructor(System.Type)">
+            <summary>Returns true if <paramref name="type"/> has a parameterless public constructor.</summary>
+        </member>
+        <member name="M:CL.Common.Assemblies.ReflectionHelper.GetFriendlyName(System.Type)">
+            <summary>Returns the display name of a nullable type (e.g. "int?" instead of "Nullable`1").</summary>
+        </member>
+        <member name="T:CL.Common.Caching.ICache">
+            <summary>
+            Defines a generic asynchronous cache contract supporting typed values, TTL-based expiry,
+            prefix-based removal, and count queries.
+            Implementations include <see cref="T:CL.Common.Caching.MemoryCache"/> for in-process caching.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.SetAsync``1(System.String,``0,System.Nullable{System.TimeSpan})">
+            <summary>
+            Stores a value in the cache under the given key.
+            If the key already exists it is overwritten.
+            </summary>
+            <typeparam name="T">The type of value to store.</typeparam>
+            <param name="key">The cache key. Must not be null or empty.</param>
+            <param name="value">The value to store.</param>
+            <param name="ttl">
+            Optional time-to-live. The entry expires and is removed after this duration.
+            When null the entry does not expire.
+            </param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the value has been stored.</returns>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.GetAsync``1(System.String)">
+            <summary>
+            Retrieves a value from the cache by key.
+            Returns the default value for <typeparamref name="T"/> when the key is not found or has expired.
+            </summary>
+            <typeparam name="T">The type of the cached value.</typeparam>
+            <param name="key">The cache key to look up. Must not be null or empty.</param>
+            <returns>The cached value, or <c>default</c> if not found or expired.</returns>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.ExistsAsync(System.String)">
+            <summary>
+            Checks whether a key exists in the cache and has not expired.
+            </summary>
+            <param name="key">The cache key to check. Must not be null or empty.</param>
+            <returns><c>true</c> if the key exists and is not expired; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.RemoveAsync(System.String)">
+            <summary>
+            Removes a single entry from the cache by key.
+            Does nothing if the key does not exist.
+            </summary>
+            <param name="key">The cache key to remove. Must not be null or empty.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the entry has been removed.</returns>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.RemoveByPrefixAsync(System.String)">
+            <summary>
+            Removes all cache entries whose keys begin with the specified prefix.
+            </summary>
+            <param name="prefix">The key prefix to match. Must not be null or empty.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when all matching entries have been removed.</returns>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.ClearAsync">
+            <summary>
+            Removes all entries from the cache regardless of their TTL.
+            </summary>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the cache has been cleared.</returns>
+        </member>
+        <member name="M:CL.Common.Caching.ICache.GetCountAsync">
+            <summary>
+            Returns the number of non-expired entries currently in the cache.
+            </summary>
+            <returns>A <see cref="T:System.Threading.Tasks.Task`1"/> whose result is the count of live cache entries.</returns>
+        </member>
+        <member name="T:CL.Common.Caching.MemoryCache">
+            <summary>
+            Thread-safe in-process cache backed by a <see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2"/>.
+            Supports optional TTL per entry and runs a background cleanup loop to evict expired entries.
+            Implements <see cref="T:CL.Common.Caching.ICache"/> and <see cref="T:System.IDisposable"/>.
+            </summary>
+        </member>
+        <member name="P:CL.Common.Caching.MemoryCache.CacheEntry.Value">
+            <summary>The stored value (boxed).</summary>
+        </member>
+        <member name="P:CL.Common.Caching.MemoryCache.CacheEntry.ExpiresAt">
+            <summary>UTC time when this entry expires, or null if it never expires.</summary>
+        </member>
+        <member name="P:CL.Common.Caching.MemoryCache.CacheEntry.CreatedAt">
+            <summary>UTC time when this entry was created.</summary>
+        </member>
+        <member name="P:CL.Common.Caching.MemoryCache.CacheEntry.IsExpired">
+            <summary>Returns true if the entry has passed its expiry time.</summary>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.#ctor(System.Nullable{System.TimeSpan})">
+            <summary>
+            Initialises a new <see cref="T:CL.Common.Caching.MemoryCache"/> and starts the background cleanup loop.
+            </summary>
+            <param name="cleanupInterval">
+            How often the cleanup loop runs to evict expired entries.
+            Default: 60 seconds.
+            </param>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.SetAsync``1(System.String,``0,System.Nullable{System.TimeSpan})">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.GetAsync``1(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.ExistsAsync(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.RemoveAsync(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.RemoveByPrefixAsync(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.ClearAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.GetCountAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.Caching.MemoryCache.Dispose">
+            <summary>
+            Cancels the background cleanup loop and releases all resources.
+            </summary>
+        </member>
+        <member name="T:CL.Common.CommonLibrary">
+            <summary>
+            CL.Common library — general-purpose utility toolkit for CodeLogic 3 applications.
+            Provides Security, Generators, Caching, Compression, Imaging, Networking,
+            Data, FileHandling, Conversion, Parser, Time, and String utilities.
+            No external service dependencies — always healthy when initialized.
+            </summary>
+        </member>
+        <member name="P:CL.Common.CommonLibrary.Manifest">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.CommonLibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.CommonLibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.CommonLibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.CommonLibrary.OnStopAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.CommonLibrary.HealthCheckAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.Common.CommonLibrary.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.Common.Compression.CompressionHelper">
+            <summary>
+            Provides GZip, Brotli, and LZ4 compression and decompression utilities.
+            All methods return <see cref="T:CodeLogic.Core.Results.Result`1"/> to signal failures without throwing.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.CompressGzip(System.Byte[])">
+            <summary>
+            Compresses the given byte array using GZip compression.
+            </summary>
+            <param name="data">The raw bytes to compress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the compressed bytes on success,
+            or a failure result with an error description.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.DecompressGzip(System.Byte[])">
+            <summary>
+            Decompresses a GZip-compressed byte array.
+            </summary>
+            <param name="data">The GZip-compressed bytes to decompress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the decompressed bytes on success,
+            or a failure result if decompression fails.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.CompressBrotli(System.Byte[])">
+            <summary>
+            Compresses the given byte array using Brotli compression.
+            </summary>
+            <param name="data">The raw bytes to compress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the compressed bytes on success,
+            or a failure result with an error description.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.DecompressBrotli(System.Byte[])">
+            <summary>
+            Decompresses a Brotli-compressed byte array.
+            </summary>
+            <param name="data">The Brotli-compressed bytes to decompress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the decompressed bytes on success,
+            or a failure result if decompression fails.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.CompressLz4(System.Byte[])">
+            <summary>
+            Compresses the given byte array using LZ4 compression (via K4os.Compression.LZ4.Streams).
+            LZ4 offers very fast compression at the cost of slightly lower compression ratios than GZip.
+            </summary>
+            <param name="data">The raw bytes to compress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the LZ4-compressed bytes on success,
+            or a failure result with an error description.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.DecompressLz4(System.Byte[])">
+            <summary>
+            Decompresses an LZ4-compressed byte array produced by <see cref="M:CL.Common.Compression.CompressionHelper.CompressLz4(System.Byte[])"/>.
+            </summary>
+            <param name="data">The LZ4-compressed bytes to decompress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the decompressed bytes on success,
+            or a failure result if decompression fails.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.CompressString(System.String)">
+            <summary>
+            Compresses a UTF-8 string using GZip and returns the result as a Base64-encoded string.
+            Useful for storing compressed text in text-based storage systems.
+            </summary>
+            <param name="text">The text to compress. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the Base64-encoded GZip-compressed text on success,
+            or a failure result with an error description.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Compression.CompressionHelper.DecompressString(System.String)">
+            <summary>
+            Decompresses a Base64-encoded GZip-compressed string produced by <see cref="M:CL.Common.Compression.CompressionHelper.CompressString(System.String)"/>.
+            </summary>
+            <param name="compressed">The Base64-encoded compressed string. Must not be null.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the original UTF-8 text on success,
+            or a failure result if decompression or Base64 decoding fails.
+            </returns>
+        </member>
+        <member name="T:CL.Common.Conversion.TypeConverter">
+            <summary>
+            Provides safe type conversion utilities that return <see cref="T:CodeLogic.Core.Results.Result`1"/>
+            instead of throwing exceptions.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.Convert``1(System.Object)">
+            <summary>
+            Attempts to convert <paramref name="value"/> to type <typeparamref name="T"/>.
+            Supports all primitive types, enums, and types with a <c>TypeConverter</c>.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.TryConvert``1(System.Object,``0@)">
+            <summary>
+            Tries to convert <paramref name="value"/> to <typeparamref name="T"/>.
+            Returns <c>false</c> and sets <paramref name="result"/> to <c>default</c> on failure.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToInt(System.String)">
+            <summary>Parses a string to <see cref="T:System.Int32"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToLong(System.String)">
+            <summary>Parses a string to <see cref="T:System.Int64"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToDouble(System.String)">
+            <summary>Parses a string to <see cref="T:System.Double"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToBool(System.String)">
+            <summary>
+            Parses a string to <see cref="T:System.Boolean"/>.
+            Accepts: true/false, yes/no, 1/0, on/off (case-insensitive).
+            </summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToDateTime(System.String)">
+            <summary>
+            Parses an ISO 8601 or common date string to <see cref="T:System.DateTime"/>.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToEnum``1(System.String)">
+            <summary>
+            Parses a string to an enum value of type <typeparamref name="T"/>.
+            Case-insensitive. Also accepts numeric string values.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToGuid(System.String)">
+            <summary>Parses a string to a <see cref="T:System.Guid"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Conversion.TypeConverter.ToDecimal(System.String)">
+            <summary>Parses a string to a <see cref="T:System.Decimal"/>.</summary>
+        </member>
+        <member name="T:CL.Common.Data.JsonHelper">
+            <summary>
+            Provides JSON serialization, deserialization, file I/O, validation, and merging utilities.
+            Uses <c>System.Text.Json</c> as the primary engine.
+            All operations that can fail return <see cref="T:CodeLogic.Core.Results.Result`1"/> or <see cref="T:CodeLogic.Core.Results.Result"/>.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.Serialize``1(``0,System.Boolean)">
+            <summary>Serializes the given object to a JSON string.</summary>
+            <typeparam name="T">The type of the object to serialize.</typeparam>
+            <param name="obj">The object to serialize. May be null.</param>
+            <param name="indented">When <c>true</c>, output is formatted with indentation. Default: <c>false</c>.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the JSON string on success, or a failure result.</returns>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.Deserialize``1(System.String)">
+            <summary>Deserializes a JSON string into an instance of <typeparamref name="T"/>.</summary>
+            <typeparam name="T">The target type.</typeparam>
+            <param name="json">The JSON string to deserialize.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the deserialized value on success, or a failure result.</returns>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.SerializeToFile``1(``0,System.String,System.Boolean)">
+            <summary>Serializes an object to JSON and writes it to the specified file path.</summary>
+            <typeparam name="T">The type of the object to serialize.</typeparam>
+            <param name="obj">The object to serialize and write.</param>
+            <param name="filePath">The file path to write to. The parent directory is created if it does not exist.</param>
+            <param name="indented">When <c>true</c>, the written JSON is formatted with indentation. Default: <c>true</c>.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result"/> indicating success or failure.</returns>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.DeserializeFromFile``1(System.String)">
+            <summary>Reads a JSON file from disk and deserializes its contents into an instance of <typeparamref name="T"/>.</summary>
+            <typeparam name="T">The target type.</typeparam>
+            <param name="filePath">The path to the JSON file to read.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the deserialized value on success, or a failure result.</returns>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.IsValidJson(System.String)">
+            <summary>Validates whether the given string is well-formed JSON.</summary>
+            <param name="json">The string to validate. Returns <c>false</c> for null or whitespace.</param>
+            <returns><c>true</c> if the string is valid JSON; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.Merge(System.String,System.String)">
+            <summary>
+            Merges two JSON objects. Properties from <paramref name="overlayJson"/> overwrite matching
+            properties in <paramref name="baseJson"/>; non-conflicting properties from both are preserved.
+            </summary>
+            <param name="baseJson">The base JSON object string.</param>
+            <param name="overlayJson">The overlay JSON object string whose values take precedence.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the merged JSON string on success, or a failure result.</returns>
+        </member>
+        <member name="M:CL.Common.Data.JsonHelper.GetProperty(System.String,System.String)">
+            <summary>Attempts to extract the raw JSON text of a top-level property from a JSON string.</summary>
+            <param name="json">The JSON object string to read from.</param>
+            <param name="propertyName">The property name to look up (case-sensitive).</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the raw JSON value string on success, or a failure result.</returns>
+        </member>
+        <member name="T:CL.Common.FileHandling.FileSystem">
+            <summary>
+            Provides safe file system operations that return <see cref="T:CodeLogic.Core.Results.Result`1"/>
+            instead of throwing exceptions. All async methods are non-blocking.
+            </summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.ReadAllTextAsync(System.String)">
+            <summary>Reads all text from a file asynchronously.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.WriteAllTextAsync(System.String,System.String)">
+            <summary>Writes text to a file asynchronously, creating the file and any missing directories.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.ReadAllBytesAsync(System.String)">
+            <summary>Reads all bytes from a file asynchronously.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.WriteAllBytesAsync(System.String,System.Byte[])">
+            <summary>Writes bytes to a file asynchronously, creating any missing directories.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.CopyAsync(System.String,System.String,System.Boolean)">
+            <summary>Copies a file asynchronously.</summary>
+            <param name="overwrite">When true, overwrites the destination if it exists.</param>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.MoveAsync(System.String,System.String)">
+            <summary>Moves a file, creating any missing destination directories.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.DeleteFile(System.String)">
+            <summary>Deletes a file. Returns success even if the file does not exist.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.CreateDirectory(System.String)">
+            <summary>Creates a directory and all intermediate directories. Succeeds if already exists.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.GetFilesAsync(System.String,System.String)">
+            <summary>Lists all files in a directory matching the given search pattern.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.GetFileSizeBytes(System.String)">
+            <summary>Returns the size of a file in bytes.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.FileExists(System.String)">
+            <summary>Returns true if the file exists.</summary>
+        </member>
+        <member name="M:CL.Common.FileHandling.FileSystem.DirectoryExists(System.String)">
+            <summary>Returns true if the directory exists.</summary>
+        </member>
+        <member name="T:CL.Common.Generators.IdGenerator">
+            <summary>
+            Provides a variety of ID and token generation strategies for use in applications.
+            All methods are thread-safe and use cryptographically random sources where appropriate.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.NewGuid">
+            <summary>
+            Generates a new <see cref="T:System.Guid"/> as a standard formatted string (e.g., <c>"a1b2c3d4-e5f6-..."</c>).
+            </summary>
+            <returns>A new uppercase GUID string with dashes.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.NewGuidNoDashes">
+            <summary>
+            Generates a new <see cref="T:System.Guid"/> as a compact 32-character hexadecimal string with no dashes.
+            </summary>
+            <returns>A 32-character lowercase hexadecimal string.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.Sequential">
+            <summary>
+            Generates a sequential integer ID using an atomic counter.
+            Safe for use within a single process lifetime; resets on restart.
+            </summary>
+            <returns>A monotonically increasing <see cref="T:System.Int64"/> value.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.Timestamp">
+            <summary>
+            Generates a timestamp-based ID using the current UTC time as ticks.
+            </summary>
+            <returns>A string containing the UTC <see cref="P:System.DateTime.Ticks"/> value.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.TimestampWithPrefix(System.String)">
+            <summary>
+            Generates a timestamp-based ID with a custom prefix.
+            Format: <c>"PREFIX_ticks"</c>.
+            </summary>
+            <param name="prefix">The prefix to prepend to the timestamp. Must not be null.</param>
+            <returns>A string in the format <c>"{prefix}_{ticks}"</c>.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="prefix"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.Random(System.Int32)">
+            <summary>
+            Generates a cryptographically random alphanumeric string of the specified length.
+            </summary>
+            <param name="length">The number of characters to generate. Default: 16.</param>
+            <returns>A random alphanumeric string of the specified length.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.RandomHex(System.Int32)">
+            <summary>
+            Generates a cryptographically random hexadecimal string of the specified length.
+            </summary>
+            <param name="length">The number of hex characters to generate. Default: 32.</param>
+            <returns>A lowercase hexadecimal string of the specified length.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.RandomBase64(System.Int32)">
+            <summary>
+            Generates a cryptographically random Base64-encoded string from the specified number of bytes.
+            </summary>
+            <param name="byteLength">The number of random bytes before Base64 encoding. Default: 24.</param>
+            <returns>A Base64-encoded string (length will be approximately <c>byteLength * 4/3</c> characters).</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.UrlSafe(System.Int32)">
+            <summary>
+            Generates a cryptographically random URL-safe string using Base64url characters (<c>A-Z a-z 0-9 - _</c>).
+            </summary>
+            <param name="length">The number of characters to generate. Default: 22.</param>
+            <returns>A URL-safe random string of the specified length.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.NanoId(System.Int32)">
+            <summary>
+            Generates a NanoID — a compact, URL-safe, cryptographically random identifier.
+            Uses the NanoID alphabet (<c>A-Z a-z 0-9 _ -</c>).
+            </summary>
+            <param name="length">The number of characters to generate. Default: 21.</param>
+            <returns>A NanoID string of the specified length.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.IdGenerator.Sortable">
+            <summary>
+            Generates a sortable ID combining a UTC timestamp with a random suffix.
+            IDs generated later will sort lexicographically after earlier ones.
+            Format: <c>"{ticks:D20}_{randomHex8}"</c>.
+            </summary>
+            <returns>A sortable string ID.</returns>
+        </member>
+        <member name="T:CL.Common.Generators.PasswordStrength">
+            <summary>
+            Describes the estimated strength of a password based on entropy analysis.
+            </summary>
+        </member>
+        <member name="F:CL.Common.Generators.PasswordStrength.VeryWeak">
+            <summary>Very weak password — easily guessable (e.g., fewer than 6 characters, no complexity).</summary>
+        </member>
+        <member name="F:CL.Common.Generators.PasswordStrength.Weak">
+            <summary>Weak password — minimal complexity.</summary>
+        </member>
+        <member name="F:CL.Common.Generators.PasswordStrength.Medium">
+            <summary>Medium strength — acceptable for non-critical use.</summary>
+        </member>
+        <member name="F:CL.Common.Generators.PasswordStrength.Strong">
+            <summary>Strong password — suitable for most use cases.</summary>
+        </member>
+        <member name="F:CL.Common.Generators.PasswordStrength.VeryStrong">
+            <summary>Very strong password — high entropy, suitable for sensitive accounts.</summary>
+        </member>
+        <member name="T:CL.Common.Generators.PasswordGenerator">
+            <summary>
+            Generates secure random passwords, passphrases, and PINs.
+            All generation methods use <see cref="T:System.Security.Cryptography.RandomNumberGenerator"/> for cryptographic randomness.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Generators.PasswordGenerator.Generate(System.Int32,System.Boolean,System.Boolean,System.Boolean,System.Boolean)">
+            <summary>
+            Generates a random password of the specified length using a configurable character set.
+            </summary>
+            <param name="length">The desired password length. Default: 16.</param>
+            <param name="includeLowercase">Whether to include lowercase letters. Default: true.</param>
+            <param name="includeUppercase">Whether to include uppercase letters. Default: true.</param>
+            <param name="includeDigits">Whether to include digits. Default: true.</param>
+            <param name="includeSpecial">Whether to include special characters. Default: true.</param>
+            <returns>A cryptographically random password string.</returns>
+            <exception cref="T:System.ArgumentException">Thrown when no character sets are selected or length is less than 1.</exception>
+        </member>
+        <member name="M:CL.Common.Generators.PasswordGenerator.GenerateStrong(System.Int32)">
+            <summary>
+            Generates a strong password that guarantees at least one character from each specified category.
+            Minimum length is 12.
+            </summary>
+            <param name="length">The desired password length. Must be at least 12. Default: 16.</param>
+            <returns>A strong password with guaranteed character category coverage.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.PasswordGenerator.GeneratePassphrase(System.Int32,System.String,System.Boolean)">
+            <summary>
+            Generates a memorable passphrase by combining random words with a separator.
+            </summary>
+            <param name="wordCount">The number of words in the passphrase. Default: 4.</param>
+            <param name="separator">The character or string separating words. Default: "-".</param>
+            <param name="capitalize">Whether to capitalize the first letter of each word. Default: true.</param>
+            <returns>A passphrase made up of random dictionary words.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.PasswordGenerator.GeneratePin(System.Int32)">
+            <summary>
+            Generates a numeric PIN of the specified length.
+            </summary>
+            <param name="length">The number of digits in the PIN. Default: 6.</param>
+            <returns>A string of random digits.</returns>
+        </member>
+        <member name="M:CL.Common.Generators.PasswordGenerator.CalculateStrength(System.String)">
+            <summary>
+            Estimates the strength of a password based on its length and character variety.
+            </summary>
+            <param name="password">The password to evaluate. Must not be null.</param>
+            <returns>A <see cref="T:CL.Common.Generators.PasswordStrength"/> enum value representing the estimated strength.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="password"/> is null.</exception>
+        </member>
+        <member name="T:CL.Common.Imaging.ImageFormat">
+            <summary>
+            Specifies the target output format for image conversion operations.
+            </summary>
+        </member>
+        <member name="F:CL.Common.Imaging.ImageFormat.Jpeg">
+            <summary>JPEG format — lossy compression, suitable for photographs.</summary>
+        </member>
+        <member name="F:CL.Common.Imaging.ImageFormat.Png">
+            <summary>PNG format — lossless compression, suitable for graphics and transparency.</summary>
+        </member>
+        <member name="F:CL.Common.Imaging.ImageFormat.Webp">
+            <summary>WebP format — modern format with both lossy and lossless modes.</summary>
+        </member>
+        <member name="T:CL.Common.Imaging.CLU_Imaging">
+            <summary>
+            Provides image processing utilities including validation, resizing, conversion, thumbnail creation,
+            and Base64 encoding. All operations are implemented using SkiaSharp.
+            Methods that can fail return <see cref="T:CodeLogic.Core.Results.Result`1"/> or <see cref="T:CodeLogic.Core.Results.Result"/> instead of throwing.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.IsValidSize(System.IO.Stream,System.Int32,System.Int32)">
+            <summary>
+            Checks whether the image contained in the given stream does not exceed the specified dimensions.
+            </summary>
+            <param name="imageStream">A readable stream containing image data. Must not be null.</param>
+            <param name="maxWidth">Maximum allowed width in pixels.</param>
+            <param name="maxHeight">Maximum allowed height in pixels.</param>
+            <returns><c>true</c> if the image dimensions are within the allowed bounds; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.IsValidAspectRatio(System.IO.Stream)">
+            <summary>
+            Checks whether the image in the stream has a valid (non-degenerate) aspect ratio.
+            An aspect ratio is considered invalid if either dimension is zero.
+            </summary>
+            <param name="imageStream">A readable stream containing image data. Must not be null.</param>
+            <returns><c>true</c> if the image has non-zero width and height; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.ConvertImage(System.IO.Stream,CL.Common.Imaging.ImageFormat)">
+            <summary>
+            Converts the image in the given stream to the specified <see cref="T:CL.Common.Imaging.ImageFormat"/>.
+            </summary>
+            <param name="imageStream">A readable stream containing the source image. Must not be null.</param>
+            <param name="format">The target image format.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing a <see cref="T:System.IO.MemoryStream"/> with the converted image data on success,
+            or a failure result with a descriptive error.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.ResizeImage(System.IO.Stream,System.Int32,System.Int32,System.Boolean)">
+            <summary>
+            Resizes the image in the given stream to the specified dimensions.
+            </summary>
+            <param name="imageStream">A readable stream containing the source image. Must not be null.</param>
+            <param name="targetWidth">The desired output width in pixels.</param>
+            <param name="targetHeight">The desired output height in pixels.</param>
+            <param name="allowCrop">
+            When <c>true</c>, the image is cropped to fill the exact target dimensions.
+            When <c>false</c>, the image is scaled to fit within the bounds, preserving aspect ratio.
+            Default: <c>true</c>.
+            </param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing a <see cref="T:System.IO.MemoryStream"/> with PNG-encoded resized image data on success,
+            or a failure result with a descriptive error.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.ImageToBase64(System.String)">
+            <summary>
+            Reads an image file from disk and returns its contents as a Base64-encoded string.
+            </summary>
+            <param name="imagePath">The full path to the image file. Must not be null or empty.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing the Base64-encoded image string on success,
+            or a failure result if the file is missing or cannot be read.
+            </returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.ResizeImage(System.String,System.String,System.Int32,System.Int32,System.Boolean)">
+            <summary>
+            Resizes an image from disk and saves it to the specified output path.
+            </summary>
+            <param name="inputPath">The full path to the source image file. Must not be null or empty.</param>
+            <param name="outputPath">The full path where the resized image will be saved. Must not be null or empty.</param>
+            <param name="width">The desired output width in pixels.</param>
+            <param name="height">The desired output height in pixels.</param>
+            <param name="maintainAspectRatio">
+            When <c>true</c>, the image is scaled to fit within the bounds while preserving the aspect ratio.
+            When <c>false</c>, the image is stretched to exactly <paramref name="width"/> × <paramref name="height"/>.
+            Default: <c>true</c>.
+            </param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result"/> indicating success or failure.</returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.ConvertImageFormat(System.String,System.String,CL.Common.Imaging.ImageFormat)">
+            <summary>
+            Converts an image file to the specified format and saves it to the output path.
+            </summary>
+            <param name="inputPath">The full path to the source image file. Must not be null or empty.</param>
+            <param name="outputPath">The full path where the converted image will be saved. Must not be null or empty.</param>
+            <param name="format">The target image format.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result"/> indicating success or failure.</returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.CreateThumbnail(System.String,System.String,System.Int32)">
+            <summary>
+            Creates a square thumbnail from the specified image and saves it to the output path.
+            The image is cropped to a square centered on the image before scaling.
+            </summary>
+            <param name="inputPath">The full path to the source image file. Must not be null or empty.</param>
+            <param name="outputPath">The full path where the thumbnail will be saved. Must not be null or empty.</param>
+            <param name="thumbnailSize">The width and height (in pixels) of the square thumbnail. Default: 100.</param>
+            <returns>A <see cref="T:CodeLogic.Core.Results.Result"/> indicating success or failure.</returns>
+        </member>
+        <member name="M:CL.Common.Imaging.CLU_Imaging.GetImageDimensions(System.String)">
+            <summary>
+            Returns the pixel dimensions of an image file.
+            </summary>
+            <param name="imagePath">The full path to the image file. Must not be null or empty.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing a tuple of <c>(width, height)</c> in pixels on success,
+            or a failure result if the file is missing or cannot be decoded.
+            </returns>
+        </member>
+        <member name="T:CL.Common.Networking.PingResult">
+            <summary>
+            Result returned by a ping operation.
+            </summary>
+            <param name="Success">Whether the ping received a reply.</param>
+            <param name="RoundTripMs">Round-trip time in milliseconds, or -1 if the ping failed.</param>
+            <param name="Host">The hostname or IP address that was pinged.</param>
+        </member>
+        <member name="M:CL.Common.Networking.PingResult.#ctor(System.Boolean,System.Int64,System.String)">
+            <summary>
+            Result returned by a ping operation.
+            </summary>
+            <param name="Success">Whether the ping received a reply.</param>
+            <param name="RoundTripMs">Round-trip time in milliseconds, or -1 if the ping failed.</param>
+            <param name="Host">The hostname or IP address that was pinged.</param>
+        </member>
+        <member name="P:CL.Common.Networking.PingResult.Success">
+            <summary>Whether the ping received a reply.</summary>
+        </member>
+        <member name="P:CL.Common.Networking.PingResult.RoundTripMs">
+            <summary>Round-trip time in milliseconds, or -1 if the ping failed.</summary>
+        </member>
+        <member name="P:CL.Common.Networking.PingResult.Host">
+            <summary>The hostname or IP address that was pinged.</summary>
+        </member>
+        <member name="T:CL.Common.Networking.SubnetInfo">
+            <summary>
+            Calculated information about a subnet.
+            </summary>
+            <param name="NetworkAddress">The network address (host bits zeroed).</param>
+            <param name="BroadcastAddress">The broadcast address (host bits all set).</param>
+            <param name="SubnetMask">The subnet mask as provided.</param>
+            <param name="UsableHosts">The number of usable host addresses in the subnet.</param>
+        </member>
+        <member name="M:CL.Common.Networking.SubnetInfo.#ctor(System.String,System.String,System.String,System.Int32)">
+            <summary>
+            Calculated information about a subnet.
+            </summary>
+            <param name="NetworkAddress">The network address (host bits zeroed).</param>
+            <param name="BroadcastAddress">The broadcast address (host bits all set).</param>
+            <param name="SubnetMask">The subnet mask as provided.</param>
+            <param name="UsableHosts">The number of usable host addresses in the subnet.</param>
+        </member>
+        <member name="P:CL.Common.Networking.SubnetInfo.NetworkAddress">
+            <summary>The network address (host bits zeroed).</summary>
+        </member>
+        <member name="P:CL.Common.Networking.SubnetInfo.BroadcastAddress">
+            <summary>The broadcast address (host bits all set).</summary>
+        </member>
+        <member name="P:CL.Common.Networking.SubnetInfo.SubnetMask">
+            <summary>The subnet mask as provided.</summary>
+        </member>
+        <member name="P:CL.Common.Networking.SubnetInfo.UsableHosts">
+            <summary>The number of usable host addresses in the subnet.</summary>
+        </member>
+        <member name="T:CL.Common.Networking.HopInfo">
+            <summary>
+            Represents a single hop in a traceroute path.
+            </summary>
+            <param name="Hop">The hop number (1-based).</param>
+            <param name="Address">The IP address or hostname of this hop, or "*" if it did not respond.</param>
+            <param name="Ms">Round-trip time in milliseconds to this hop, or -1 if it timed out.</param>
+        </member>
+        <member name="M:CL.Common.Networking.HopInfo.#ctor(System.Int32,System.String,System.Int64)">
+            <summary>
+            Represents a single hop in a traceroute path.
+            </summary>
+            <param name="Hop">The hop number (1-based).</param>
+            <param name="Address">The IP address or hostname of this hop, or "*" if it did not respond.</param>
+            <param name="Ms">Round-trip time in milliseconds to this hop, or -1 if it timed out.</param>
+        </member>
+        <member name="P:CL.Common.Networking.HopInfo.Hop">
+            <summary>The hop number (1-based).</summary>
+        </member>
+        <member name="P:CL.Common.Networking.HopInfo.Address">
+            <summary>The IP address or hostname of this hop, or "*" if it did not respond.</summary>
+        </member>
+        <member name="P:CL.Common.Networking.HopInfo.Ms">
+            <summary>Round-trip time in milliseconds to this hop, or -1 if it timed out.</summary>
+        </member>
+        <member name="T:CL.Common.Networking.NetworkPing">
+            <summary>
+            Provides asynchronous network ping operations using ICMP.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Networking.NetworkPing.PingAsync(System.String,System.Int32)">
+            <summary>
+            Sends an ICMP echo (ping) request to the specified host and returns the result.
+            </summary>
+            <param name="host">The hostname or IP address to ping. Must not be null or empty.</param>
+            <param name="timeout">Timeout in milliseconds to wait for a reply. Default: 3000.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing a <see cref="T:CL.Common.Networking.PingResult"/> on success,
+            or a failure result if the operation throws an exception.
+            </returns>
+        </member>
+        <member name="T:CL.Common.Networking.NetworkDns">
+            <summary>
+            Provides asynchronous DNS lookup operations.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Networking.NetworkDns.LookupAsync(System.String)">
+            <summary>
+            Resolves all IP addresses for the given hostname using the system DNS resolver.
+            </summary>
+            <param name="hostname">The hostname or domain name to resolve. Must not be null or empty.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing an array of IP address strings on success,
+            or a failure result if the DNS lookup fails.
+            </returns>
+        </member>
+        <member name="T:CL.Common.Networking.SubnetCalculator">
+            <summary>
+            Provides subnet calculation utilities for IPv4 addresses.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Networking.SubnetCalculator.Calculate(System.String,System.String)">
+            <summary>
+            Calculates network address, broadcast address, and usable host count for the given IPv4 address and subnet mask.
+            </summary>
+            <param name="ipAddress">An IPv4 address in dotted-decimal notation (e.g., "192.168.1.50"). Must not be null or empty.</param>
+            <param name="subnetMask">A subnet mask in dotted-decimal notation (e.g., "255.255.255.0"). Must not be null or empty.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing a <see cref="T:CL.Common.Networking.SubnetInfo"/> on success,
+            or a failure result if the inputs are invalid.
+            </returns>
+        </member>
+        <member name="T:CL.Common.Networking.TraceRoute">
+            <summary>
+            Provides asynchronous traceroute operations using ICMP with incrementing TTL values.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Networking.TraceRoute.TraceAsync(System.String,System.Int32)">
+            <summary>
+            Traces the network route to the specified host by sending ICMP echo requests with increasing TTL values.
+            </summary>
+            <param name="host">The hostname or IP address to trace to. Must not be null or empty.</param>
+            <param name="maxHops">The maximum number of hops to trace. Default: 30.</param>
+            <returns>
+            A <see cref="T:CodeLogic.Core.Results.Result`1"/> containing a list of <see cref="T:CL.Common.Networking.HopInfo"/> records on success,
+            or a failure result if an exception occurs.
+            </returns>
+        </member>
+        <member name="T:CL.Common.Parser.CronExpression">
+            <summary>
+            A parsed cron expression with individual field components.
+            Cron format: <c>MINUTES HOURS DAY_OF_MONTH MONTH DAY_OF_WEEK</c>
+            </summary>
+            <param name="Raw">The original expression string.</param>
+            <param name="Minutes">Minutes field (0-59).</param>
+            <param name="Hours">Hours field (0-23).</param>
+            <param name="DayOfMonth">Day of month field (1-31).</param>
+            <param name="Month">Month field (1-12).</param>
+            <param name="DayOfWeek">Day of week field (0-6, Sunday = 0).</param>
+        </member>
+        <member name="M:CL.Common.Parser.CronExpression.#ctor(System.String,System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            A parsed cron expression with individual field components.
+            Cron format: <c>MINUTES HOURS DAY_OF_MONTH MONTH DAY_OF_WEEK</c>
+            </summary>
+            <param name="Raw">The original expression string.</param>
+            <param name="Minutes">Minutes field (0-59).</param>
+            <param name="Hours">Hours field (0-23).</param>
+            <param name="DayOfMonth">Day of month field (1-31).</param>
+            <param name="Month">Month field (1-12).</param>
+            <param name="DayOfWeek">Day of week field (0-6, Sunday = 0).</param>
+        </member>
+        <member name="P:CL.Common.Parser.CronExpression.Raw">
+            <summary>The original expression string.</summary>
+        </member>
+        <member name="P:CL.Common.Parser.CronExpression.Minutes">
+            <summary>Minutes field (0-59).</summary>
+        </member>
+        <member name="P:CL.Common.Parser.CronExpression.Hours">
+            <summary>Hours field (0-23).</summary>
+        </member>
+        <member name="P:CL.Common.Parser.CronExpression.DayOfMonth">
+            <summary>Day of month field (1-31).</summary>
+        </member>
+        <member name="P:CL.Common.Parser.CronExpression.Month">
+            <summary>Month field (1-12).</summary>
+        </member>
+        <member name="P:CL.Common.Parser.CronExpression.DayOfWeek">
+            <summary>Day of week field (0-6, Sunday = 0).</summary>
+        </member>
+        <member name="T:CL.Common.Parser.CronParser">
+            <summary>
+            Parses and evaluates cron expressions in standard 5-field format.
+            Supports: <c>*</c>, <c>*/n</c> (step), <c>a-b</c> (range), <c>a,b,c</c> (list), and exact values.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Parser.CronParser.Parse(System.String)">
+            <summary>
+            Parses a 5-field cron expression string into a <see cref="T:CL.Common.Parser.CronExpression"/>.
+            </summary>
+            <param name="expression">A 5-field cron expression, e.g. <c>"0 */6 * * *"</c>.</param>
+        </member>
+        <member name="M:CL.Common.Parser.CronParser.IsValid(System.String)">
+            <summary>Returns true if the expression is a valid 5-field cron string.</summary>
+        </member>
+        <member name="M:CL.Common.Parser.CronParser.GetNextOccurrence(System.String,System.Nullable{System.DateTime})">
+            <summary>
+            Returns the next UTC occurrence of the cron schedule after the given time.
+            Searches up to 1 year ahead. Accuracy is to the minute.
+            </summary>
+            <param name="expression">A valid 5-field cron expression.</param>
+            <param name="from">Start searching from this point. Defaults to <see cref="P:System.DateTime.UtcNow"/>.</param>
+        </member>
+        <member name="T:CL.Common.Security.Encryption">
+            <summary>
+            Provides AES-256-GCM authenticated encryption and decryption utilities with PBKDF2 key derivation.
+            AES-GCM is an AEAD (Authenticated Encryption with Associated Data) cipher that provides both
+            confidentiality and integrity. Unlike AES-CBC, it detects tampering and rejects modified ciphertext.
+            </summary>
+            <remarks>
+            <para><b>Wire format:</b> all output is structured as
+            <c>salt (16 bytes) + nonce (12 bytes) + tag (16 bytes) + ciphertext</c>.</para>
+            <para><b>Breaking change from earlier versions:</b> this class previously used AES-CBC which
+            provides no authentication and is vulnerable to padding-oracle attacks. Any data encrypted with
+            the previous (AES-CBC) implementation cannot be decrypted with this version.</para>
+            </remarks>
+        </member>
+        <member name="M:CL.Common.Security.Encryption.EncryptAes(System.String,System.String)">
+            <summary>
+            Encrypts a plaintext string using AES-256-GCM with a PBKDF2-derived key.
+            The output is a Base64-encoded string containing the salt, nonce, authentication tag, and ciphertext.
+            </summary>
+            <param name="plainText">The plaintext to encrypt. Must not be null.</param>
+            <param name="password">The password used to derive the encryption key. Must not be null.</param>
+            <returns>
+            A Base64-encoded string containing salt (16 bytes) + nonce (12 bytes) + tag (16 bytes) + ciphertext.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="plainText"/> or <paramref name="password"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Encryption.DecryptAes(System.String,System.String)">
+            <summary>
+            Decrypts a Base64-encoded ciphertext string produced by <see cref="M:CL.Common.Security.Encryption.EncryptAes(System.String,System.String)"/>.
+            </summary>
+            <param name="cipherText">The Base64-encoded ciphertext (salt + nonce + tag + ciphertext). Must not be null.</param>
+            <param name="password">The password used during encryption. Must not be null.</param>
+            <returns>The original plaintext string.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="cipherText"/> or <paramref name="password"/> is null.</exception>
+            <exception cref="T:System.Security.Cryptography.CryptographicException">Thrown when decryption or authentication fails (wrong password, corrupted data, or tampered ciphertext).</exception>
+        </member>
+        <member name="M:CL.Common.Security.Encryption.EncryptBytes(System.Byte[],System.String)">
+            <summary>
+            Encrypts a byte array using AES-256-GCM with a PBKDF2-derived key.
+            </summary>
+            <param name="data">The data to encrypt. Must not be null.</param>
+            <param name="password">The password used to derive the encryption key. Must not be null.</param>
+            <returns>
+            A byte array containing salt (16 bytes) + nonce (12 bytes) + tag (16 bytes) + ciphertext.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="data"/> or <paramref name="password"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Encryption.DecryptBytes(System.Byte[],System.String)">
+            <summary>
+            Decrypts a byte array produced by <see cref="M:CL.Common.Security.Encryption.EncryptBytes(System.Byte[],System.String)"/>.
+            AES-GCM verifies the authentication tag before returning plaintext —
+            any modification to the encrypted data causes a <see cref="T:System.Security.Cryptography.CryptographicException"/>.
+            </summary>
+            <param name="encryptedData">
+            The encrypted data containing salt (16 bytes) + nonce (12 bytes) + tag (16 bytes) + ciphertext.
+            Must not be null.
+            </param>
+            <param name="password">The password used during encryption. Must not be null.</param>
+            <returns>The decrypted plaintext bytes.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="encryptedData"/> or <paramref name="password"/> is null.</exception>
+            <exception cref="T:System.Security.Cryptography.CryptographicException">
+            Thrown when authentication fails (wrong password, corrupted data, or tampered ciphertext).
+            </exception>
+        </member>
+        <member name="M:CL.Common.Security.Encryption.GenerateKey(System.Int32)">
+            <summary>
+            Generates a cryptographically random Base64-encoded key of the specified byte length.
+            </summary>
+            <param name="length">The number of random bytes to generate. Default: 32 (256-bit key).</param>
+            <returns>A Base64-encoded string representing the random key.</returns>
+        </member>
+        <member name="T:CL.Common.Security.Hashing">
+            <summary>
+            Provides hashing utilities including SHA-256, SHA-512, MD5 (obsolete),
+            PBKDF2 password hashing, salt generation, and HMAC variants.
+            All methods are thread-safe and stateless.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.Sha256(System.String)">
+            <summary>
+            Computes the SHA-256 hash of the given UTF-8 string.
+            </summary>
+            <param name="input">The string to hash. Must not be null.</param>
+            <returns>A lowercase hexadecimal string representing the SHA-256 hash.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="input"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.Sha512(System.String)">
+            <summary>
+            Computes the SHA-512 hash of the given UTF-8 string.
+            </summary>
+            <param name="input">The string to hash. Must not be null.</param>
+            <returns>A lowercase hexadecimal string representing the SHA-512 hash.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="input"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.Md5(System.String)">
+            <summary>
+            Computes the MD5 hash of the given UTF-8 string.
+            </summary>
+            <param name="input">The string to hash. Must not be null.</param>
+            <returns>A lowercase hexadecimal string representing the MD5 hash.</returns>
+            <remarks>
+            MD5 is cryptographically broken and should not be used for security-sensitive purposes.
+            Use <see cref="M:CL.Common.Security.Hashing.Sha256(System.String)"/> or <see cref="M:CL.Common.Security.Hashing.Sha512(System.String)"/> instead.
+            </remarks>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.HashPassword(System.String,System.Int32)">
+            <summary>
+            Hashes a password using PBKDF2-SHA256 with a random salt.
+            The returned string contains both the salt and hash encoded as Base64,
+            suitable for storage in a database.
+            </summary>
+            <param name="password">The plaintext password to hash. Must not be null.</param>
+            <param name="iterations">The number of PBKDF2 iterations. Higher values are more secure but slower. Default: 100000.</param>
+            <returns>A Base64-encoded string containing the 16-byte salt followed by the 32-byte hash.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="password"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.VerifyPassword(System.String,System.String,System.Int32)">
+            <summary>
+            Verifies a plaintext password against a hashed password produced by <see cref="M:CL.Common.Security.Hashing.HashPassword(System.String,System.Int32)"/>.
+            Uses constant-time comparison to prevent timing attacks.
+            </summary>
+            <param name="password">The plaintext password to verify. Must not be null.</param>
+            <param name="hashedPassword">The Base64-encoded salt+hash string returned by <see cref="M:CL.Common.Security.Hashing.HashPassword(System.String,System.Int32)"/>. Must not be null.</param>
+            <param name="iterations">The number of PBKDF2 iterations used when hashing. Must match the value used in <see cref="M:CL.Common.Security.Hashing.HashPassword(System.String,System.Int32)"/>. Default: 100000.</param>
+            <returns><c>true</c> if the password matches the hash; otherwise <c>false</c>.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="password"/> or <paramref name="hashedPassword"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.GenerateSalt(System.Int32)">
+            <summary>
+            Generates a cryptographically random salt encoded as Base64.
+            </summary>
+            <param name="size">The number of random bytes to generate. Default: 16.</param>
+            <returns>A Base64-encoded string of <paramref name="size"/> random bytes.</returns>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.HmacSha256(System.String,System.String)">
+            <summary>
+            Computes an HMAC-SHA256 of the given input using the specified key.
+            </summary>
+            <param name="input">The message to authenticate. Must not be null.</param>
+            <param name="key">The secret key. Must not be null.</param>
+            <returns>A lowercase hexadecimal string of the HMAC-SHA256 result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="input"/> or <paramref name="key"/> is null.</exception>
+        </member>
+        <member name="M:CL.Common.Security.Hashing.HmacSha512(System.String,System.String)">
+            <summary>
+            Computes an HMAC-SHA512 of the given input using the specified key.
+            </summary>
+            <param name="input">The message to authenticate. Must not be null.</param>
+            <param name="key">The secret key. Must not be null.</param>
+            <returns>A lowercase hexadecimal string of the HMAC-SHA512 result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="input"/> or <paramref name="key"/> is null.</exception>
+        </member>
+        <member name="T:CL.Common.Strings.StringHelper">
+            <summary>
+            Provides string manipulation utilities: truncation, slugification,
+            case conversion, HTML stripping, and more.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.Truncate(System.String,System.Int32,System.String)">
+            <summary>
+            Truncates a string to <paramref name="maxLength"/> characters,
+            appending <paramref name="suffix"/> if truncation occurs.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ToSlug(System.String)">
+            <summary>
+            Converts a string to a URL-friendly slug.
+            Lowercases, replaces spaces/underscores with hyphens,
+            removes non-alphanumeric characters, and collapses multiple hyphens.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ToCamelCase(System.String)">
+            <summary>
+            Converts a string to camelCase.
+            Example: "hello world" → "helloWorld"
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ToPascalCase(System.String)">
+            <summary>
+            Converts a string to PascalCase.
+            Example: "hello world" → "HelloWorld"
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ToSnakeCase(System.String)">
+            <summary>
+            Converts a string to snake_case.
+            Example: "HelloWorld" → "hello_world"
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ToKebabCase(System.String)">
+            <summary>
+            Converts a string to kebab-case.
+            Example: "HelloWorld" → "hello-world"
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.StripHtml(System.String)">
+            <summary>
+            Removes all HTML tags from the input, returning plain text.
+            Does not decode HTML entities.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.WordCount(System.String)">
+            <summary>Returns the number of words in the text (split on whitespace).</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.Repeat(System.String,System.Int32)">
+            <summary>Repeats <paramref name="value"/> exactly <paramref name="count"/> times.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.Reverse(System.String)">
+            <summary>Reverses the characters in a string.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ContainsAny(System.String,System.String[])">
+            <summary>
+            Returns true if <paramref name="value"/> contains any of the given substrings.
+            Case-sensitive by default.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.CountOccurrences(System.String,System.String)">
+            <summary>Counts how many times <paramref name="substring"/> appears in <paramref name="text"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.ExtractNumbers(System.String)">
+            <summary>Extracts all numeric sequences from the text and returns them as longs.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.IsAscii(System.String)">
+            <summary>Returns true if the string contains only ASCII characters.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringHelper.Capitalize(System.String)">
+            <summary>Converts the first character to uppercase and the rest to lowercase.</summary>
+        </member>
+        <member name="T:CL.Common.Strings.StringValidator">
+            <summary>
+            Provides common string validation methods. All methods are stateless and thread-safe.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsEmail(System.String)">
+            <summary>Returns true if the string is a valid email address.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsUrl(System.String)">
+            <summary>
+            Returns true if the string is a valid absolute URL (http or https).
+            </summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsPhoneNumber(System.String)">
+            <summary>Returns true if the string looks like a phone number (7–20 digits, optional +, spaces, dashes, parens).</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsNumeric(System.String)">
+            <summary>Returns true if the string contains only digits and an optional leading minus/decimal point.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsAlphanumeric(System.String)">
+            <summary>Returns true if the string contains only letters and digits (a-z, A-Z, 0-9).</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsIPv4(System.String)">
+            <summary>Returns true if the string is a valid IPv4 address (e.g. "192.168.1.1").</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsIPv6(System.String)">
+            <summary>Returns true if the string is a valid IPv6 address.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsGuid(System.String)">
+            <summary>Returns true if the string is a valid GUID in standard format.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.HasMinLength(System.String,System.Int32)">
+            <summary>Returns true if the string length is at least <paramref name="min"/> characters.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.HasMaxLength(System.String,System.Int32)">
+            <summary>Returns true if the string length does not exceed <paramref name="max"/> characters.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.MatchesPattern(System.String,System.String)">
+            <summary>
+            Returns true if the entire string matches the given regular expression pattern.
+            </summary>
+            <param name="value">The string to test.</param>
+            <param name="pattern">A .NET regular expression pattern.</param>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsNullOrWhiteSpace(System.String)">
+            <summary>Returns true if the string is null or consists only of whitespace.</summary>
+        </member>
+        <member name="M:CL.Common.Strings.StringValidator.IsNotEmpty(System.String)">
+            <summary>Returns true if the string is not null and not whitespace.</summary>
+        </member>
+        <member name="T:CL.Common.Time.DateTimeHelper">
+            <summary>
+            Provides date and time utility methods including Unix timestamps,
+            ISO 8601 parsing, business day calculations, and relative time strings.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.ToUnixTimestamp(System.DateTime)">
+            <summary>Converts a <see cref="T:System.DateTime"/> to a Unix timestamp (seconds since 1970-01-01 UTC).</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.FromUnixTimestamp(System.Int64)">
+            <summary>Converts a Unix timestamp (seconds) to a UTC <see cref="T:System.DateTime"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.ToUnixMilliseconds(System.DateTime)">
+            <summary>Converts a <see cref="T:System.DateTime"/> to a Unix timestamp in milliseconds.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.ToIso8601(System.DateTime)">
+            <summary>Formats a <see cref="T:System.DateTime"/> as an ISO 8601 round-trip string (e.g. <c>2026-04-06T12:00:00.000Z</c>).</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.FromIso8601(System.String)">
+            <summary>Parses an ISO 8601 string to a UTC <see cref="T:System.DateTime"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.GetAge(System.DateTime)">
+            <summary>Calculates age in whole years from a birth date to today.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.IsWeekend(System.DateTime)">
+            <summary>Returns true if the date falls on a Saturday or Sunday.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.IsBusinessDay(System.DateTime)">
+            <summary>Returns true if the date is a Monday–Friday (no public holiday awareness).</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.NextBusinessDay(System.DateTime)">
+            <summary>Returns the next Monday–Friday after <paramref name="dt"/>. Returns the same day if already a business day.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.StartOfDay(System.DateTime)">
+            <summary>Returns midnight (00:00:00) on the same day.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.EndOfDay(System.DateTime)">
+            <summary>Returns 23:59:59.999 on the same day.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.StartOfWeek(System.DateTime,System.DayOfWeek)">
+            <summary>Returns the first day of the week containing <paramref name="dt"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.StartOfMonth(System.DateTime)">
+            <summary>Returns the first day of the month.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.EndOfMonth(System.DateTime)">
+            <summary>Returns the last day of the month at 23:59:59.999.</summary>
+        </member>
+        <member name="M:CL.Common.Time.DateTimeHelper.ToRelativeString(System.DateTime)">
+            <summary>
+            Returns a human-readable relative time string.
+            Examples: "just now", "3 minutes ago", "in 2 hours", "yesterday".
+            </summary>
+        </member>
+        <member name="T:CL.Common.Web.HtmlHelper">
+            <summary>
+            Provides HTML sanitization and trimming utilities.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HtmlHelper.StripTags(System.String)">
+            <summary>
+            Strips all HTML tags, returning plain text.
+            Does not decode HTML entities (e.g. &amp;amp; stays as &amp;amp;).
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HtmlHelper.Sanitize(System.String)">
+            <summary>
+            Sanitizes HTML by removing script tags, style tags, and inline event handlers.
+            Safe for displaying user-provided content that may contain limited HTML.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HtmlHelper.TrimWhitespace(System.String)">
+            <summary>
+            Trims whitespace inside HTML, collapsing multiple spaces/newlines to single spaces.
+            Preserves HTML structure.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HtmlHelper.Encode(System.String)">
+            <summary>
+            Encodes a plain-text string so it is safe to embed in HTML.
+            Converts &lt; &gt; &amp; &quot; to their HTML entity equivalents.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HtmlHelper.Decode(System.String)">
+            <summary>
+            Decodes HTML entities back to plain text.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HtmlHelper.TruncateText(System.String,System.Int32,System.String)">
+            <summary>
+            Truncates HTML content to approximately <paramref name="maxLength"/> visible characters,
+            stripping tags first. Appends <paramref name="suffix"/> if truncated.
+            </summary>
+        </member>
+        <member name="T:CL.Common.Web.HttpClientHelper">
+            <summary>
+            Provides typed, async HTTP request helpers built on <see cref="T:System.Net.Http.HttpClient"/>.
+            Uses <see cref="T:CodeLogic.Core.Results.Result`1"/> for all operations so callers never need to catch exceptions.
+            Create one <see cref="T:System.Net.Http.HttpClient"/> instance per base URL and reuse it.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpClientHelper.GetStringAsync(System.Net.Http.HttpClient,System.String,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>Sends a GET request and returns the response body as a string.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpClientHelper.GetJsonAsync``1(System.Net.Http.HttpClient,System.String,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>Sends a GET request and deserializes the JSON response to <typeparamref name="T"/>.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpClientHelper.PostJsonAsync``1(System.Net.Http.HttpClient,System.String,``0,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>Sends a POST request with a JSON body and returns the response string.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpClientHelper.PostJsonAsync``2(System.Net.Http.HttpClient,System.String,``0,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>Sends a POST request and deserializes the JSON response.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpClientHelper.PutJsonAsync``1(System.Net.Http.HttpClient,System.String,``0,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>Sends a PUT request with a JSON body.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpClientHelper.DeleteAsync(System.Net.Http.HttpClient,System.String,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>Sends a DELETE request.</summary>
+        </member>
+        <member name="T:CL.Common.Web.HttpHeaderHelper">
+            <summary>
+            Provides utilities for working with HTTP headers, client detection,
+            and IP address utilities. Framework-agnostic — pass header values directly.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.GetPrimaryLocale(System.String)">
+            <summary>
+            Parses an Accept-Language header value and returns the preferred culture.
+            Example: "da-DK,da;q=0.9,en-US;q=0.8" → "da-DK"
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.GetEffectiveClientIp(System.String,System.String)">
+            <summary>
+            Determines the most accurate public-facing client IP address.
+            Checks X-Forwarded-For first, falls back to the remote address.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.IsPrivateIp(System.String)">
+            <summary>Returns true if the IP address is in a private/RFC1918 range or loopback.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.IsBot(System.String)">
+            <summary>Returns true if the User-Agent string matches known bot/crawler patterns.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.IsMobile(System.String)">
+            <summary>Returns true if the User-Agent suggests a mobile device.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.AcceptsJson(System.String)">
+            <summary>Returns true if the Accept header includes application/json.</summary>
+        </member>
+        <member name="M:CL.Common.Web.HttpHeaderHelper.GetHeader(System.Collections.Generic.Dictionary{System.String,System.String},System.String)">
+            <summary>Returns the value of a header by name (case-insensitive) from a dictionary.</summary>
+        </member>
+        <member name="T:CL.Common.Web.UrlHelper">
+            <summary>
+            Provides URL parsing, building, and encoding utilities.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.Encode(System.String)">
+            <summary>Encodes a string for safe use in a URL query string.</summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.Decode(System.String)">
+            <summary>Decodes a URL-encoded string.</summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.IsValid(System.String)">
+            <summary>Returns true if the string is a valid absolute HTTP or HTTPS URL.</summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.Combine(System.String,System.String)">
+            <summary>
+            Combines a base URL and a relative path, handling trailing/leading slashes correctly.
+            Example: Combine("https://api.example.com/", "/users") → "https://api.example.com/users"
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.AppendQuery(System.String,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Appends query string parameters to a URL.
+            Existing query strings are preserved.
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.ParseQuery(System.String)">
+            <summary>
+            Parses a query string into a dictionary of key-value pairs.
+            Example: "?foo=bar&amp;baz=1" → { "foo": "bar", "baz": "1" }
+            </summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.GetDomain(System.String)">
+            <summary>Extracts just the domain (host) from a URL. Returns empty string on failure.</summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.GetPath(System.String)">
+            <summary>Extracts the path component from a URL (without query string or fragment).</summary>
+        </member>
+        <member name="M:CL.Common.Web.UrlHelper.IsHttps(System.String)">
+            <summary>Returns true if the URL uses HTTPS.</summary>
+        </member>
+    </members>
+</doc>

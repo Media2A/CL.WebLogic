@@ -23,6 +23,7 @@ public sealed class WebRouteOptions
     public string[] Tags { get; init; } = [];
     public string[] RequiredAccessGroups { get; init; } = [];
     public bool AllowAnonymous { get; init; } = true;
+    public IWebMiddleware[]? Middleware { get; init; }
 }
 
 public sealed class WebRegistrationContext
@@ -69,6 +70,12 @@ public sealed class WebRegistrationContext
     public void RegisterWidget(string name, WebWidgetOptions options, WebWidgetHandler handler) =>
         _api.RegisterWidget(name, handler, Contributor, options);
 
+    public void UseMiddleware(IWebMiddleware middleware) =>
+        _api.UseMiddleware(middleware);
+
+    public void UseMiddleware(Func<WebRequestContext, WebMiddlewareNext, Task<WebResult>> handler) =>
+        _api.UseMiddleware(new WebDelegateMiddleware(handler));
+
     public void RegisterWidgetArea(string areaName, string widgetName) =>
         RegisterWidgetArea(areaName, widgetName, new WebWidgetAreaOptions());
 
@@ -104,6 +111,7 @@ public sealed class WebLogicRegistrationApi
 {
     private readonly WebRouteRegistry _routes;
     private readonly WebWidgetRegistry _widgets;
+    private WebLogicRuntime? _runtime;
 
     internal WebLogicRegistrationApi(WebRouteRegistry routes, WebWidgetRegistry widgets)
     {
@@ -111,8 +119,16 @@ public sealed class WebLogicRegistrationApi
         _widgets = widgets;
     }
 
+    internal void SetRuntime(WebLogicRuntime runtime)
+    {
+        _runtime = runtime;
+    }
+
     public WebRegistrationContext CreateContext(WebContributorDescriptor contributor) =>
         new(this, contributor);
+
+    internal void UseMiddleware(IWebMiddleware middleware) =>
+        _runtime?.UseMiddleware(middleware);
 
     internal void Register(
         string path,

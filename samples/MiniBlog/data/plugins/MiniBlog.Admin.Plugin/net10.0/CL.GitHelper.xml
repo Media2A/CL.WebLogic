@@ -1,0 +1,766 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CL.GitHelper</name>
+    </assembly>
+    <members>
+        <member name="T:CL.GitHelper.GitHelperLibrary">
+            <summary>
+            <b>CL.GitHelper</b> — CodeLogic library providing managed Git repository operations
+            via <see href="https://github.com/libgit2/libgit2sharp">LibGit2Sharp</see>.
+            <para>
+            Lifecycle:
+            <list type="number">
+              <item><description><b>Configure</b> — registers <see cref="T:CL.GitHelper.Models.GitHelperConfig"/> (→ config.githelper.json).</description></item>
+              <item><description><b>Initialize</b> — loads config, resolves base directory, creates <see cref="T:CL.GitHelper.Services.GitManager"/>, probes repositories.</description></item>
+              <item><description><b>Start</b> — optionally triggers auto-fetch on repositories with <see cref="P:CL.GitHelper.Models.RepositoryConfiguration.AutoFetch"/> enabled.</description></item>
+              <item><description><b>Stop</b> — disposes the <see cref="T:CL.GitHelper.Services.GitManager"/> and all cached connections.</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.GitHelperLibrary.Manifest">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.OnStopAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.HealthCheckAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.GetRepositoryAsync(System.String)">
+            <summary>
+            Returns the <see cref="T:CL.GitHelper.Services.GitRepository"/> instance for the given configuration ID.
+            Creates and caches the instance if not already cached.
+            </summary>
+            <param name="repositoryId">Repository ID from config (default: "Default").</param>
+            <exception cref="T:System.InvalidOperationException">Thrown when called before <see cref="M:CL.GitHelper.GitHelperLibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)"/>.</exception>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.GetManager">
+            <summary>Returns the underlying <see cref="T:CL.GitHelper.Services.GitManager"/>.</summary>
+            <exception cref="T:System.InvalidOperationException">Thrown when called before <see cref="M:CL.GitHelper.GitHelperLibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)"/>.</exception>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.RegisterRepository(CL.GitHelper.Models.RepositoryConfiguration)">
+            <summary>
+            Registers an additional repository configuration at runtime.
+            Useful when repositories are discovered dynamically after startup.
+            </summary>
+            <param name="configuration">Repository to add. Must be valid and have a unique ID.</param>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.GetCacheStats">
+            <summary>Returns a snapshot of the repository cache state.</summary>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.ClearCacheAsync">
+            <summary>Evicts all cached repository instances, forcing them to be re-opened on next access.</summary>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.FetchAllAsync(CL.GitHelper.Models.FetchOptions,System.Int32)">
+            <summary>
+            Fetches all configured repositories concurrently.
+            </summary>
+            <param name="options">Fetch options applied to every repository.</param>
+            <param name="maxConcurrency">Maximum parallel fetches. 0 = use configuration default.</param>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.GetAllStatusAsync(System.Int32)">
+            <summary>
+            Returns working-tree status for all configured repositories.
+            </summary>
+            <param name="maxConcurrency">Maximum parallel status checks. 0 = use configuration default.</param>
+        </member>
+        <member name="M:CL.GitHelper.GitHelperLibrary.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.GitHelper.Models.RepositoryConfiguration">
+            <summary>
+            Configuration for a single Git repository entry.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.Id">
+            <summary>
+            Unique identifier for this repository (e.g., "Default", "MyRepo").
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.Name">
+            <summary>
+            Human-readable display name.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.RepositoryUrl">
+            <summary>
+            Remote repository URL — HTTPS or SSH (e.g., "https://github.com/org/repo.git").
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.LocalPath">
+            <summary>
+            Local directory path where the repository is (or will be) cloned.
+            Relative paths are resolved from <see cref="P:CL.GitHelper.Models.GitHelperConfig.BaseDirectory"/>.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.DefaultBranch">
+            <summary>
+            Default branch name used when no branch is specified (e.g., "main", "master").
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.Username">
+            <summary>
+            Username for HTTPS authentication. Leave null for anonymous or SSH access.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.Password">
+            <summary>
+            Password or Personal Access Token for HTTPS authentication.
+            Leave null for anonymous or SSH access.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.SshKeyPath">
+            <summary>
+            Path to an SSH private key file for SSH-URL repositories.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.SshPassphrase">
+            <summary>
+            Passphrase for the SSH private key, if encrypted.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.AutoFetch">
+            <summary>
+            Whether to automatically fetch on library start-up.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.AutoFetchIntervalMinutes">
+            <summary>
+            How often (in minutes) to auto-fetch in the background. 0 disables the timer.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryConfiguration.TimeoutSeconds">
+            <summary>
+            Per-repository operation timeout in seconds.
+            </summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.RepositoryConfiguration.IsValid">
+            <summary>
+            Validates that at minimum a URL and local path are set.
+            </summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.GitHelperConfig">
+            <summary>
+            Root configuration for <c>CL.GitHelper</c>.
+            Serialized to / from <c>config.githelper.json</c> in the library's config directory.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.Enabled">
+            <summary>
+            Whether the library is active. When false, all operations are no-ops.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.BaseDirectory">
+            <summary>
+            Base directory for resolving relative <see cref="P:CL.GitHelper.Models.RepositoryConfiguration.LocalPath"/> values.
+            Defaults to a <c>repositories</c> sub-folder inside the library's data directory.
+            Leave empty to resolve paths relative to the process working directory.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.Repositories">
+            <summary>
+            List of configured repositories. At least one must be present.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.DefaultTimeoutSeconds">
+            <summary>
+            Default operation timeout applied when a repository config does not specify one.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.MaxConcurrentOperations">
+            <summary>
+            Maximum number of repositories operated on concurrently during batch calls.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.EnableRepositoryCaching">
+            <summary>
+            Whether to keep <c>GitRepository</c> instances in a memory cache between calls.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitHelperConfig.CacheTimeoutMinutes">
+            <summary>
+            How long (minutes) a cached repository entry lives before being evicted. 0 = never expire.
+            </summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitHelperConfig.GetRepository(System.String)">
+            <summary>Returns the <see cref="T:CL.GitHelper.Models.RepositoryConfiguration"/> with the given ID, or null.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitHelperConfig.Validate">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.GitHelper.Models.GitResult`1">
+            <summary>
+            Result of a Git operation, carrying typed data on success or an error description on failure.
+            </summary>
+            <typeparam name="T">The payload type returned on success.</typeparam>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitResult`1.IsSuccess">
+            <summary>Whether the operation succeeded.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitResult`1.Value">
+            <summary>The result payload. Non-null only when <see cref="P:CL.GitHelper.Models.GitResult`1.IsSuccess"/> is true.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitResult`1.ErrorMessage">
+            <summary>Human-readable error message. Non-null only when <see cref="P:CL.GitHelper.Models.GitResult`1.IsSuccess"/> is false.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitResult`1.Exception">
+            <summary>The exception that caused the failure, if one was caught.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitResult`1.Diagnostics">
+            <summary>Performance and transfer diagnostics captured during the operation.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitResult`1.Ok(`0,CL.GitHelper.Models.GitDiagnostics)">
+            <summary>Creates a successful result containing <paramref name="value"/>.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitResult`1.Fail(System.String,System.Exception,CL.GitHelper.Models.GitDiagnostics)">
+            <summary>Creates a failed result with an error message and optional exception.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.GitDiagnostics">
+            <summary>
+            Performance and transfer metrics captured during a Git operation.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.StartedAt">
+            <summary>UTC time when the operation started.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.CompletedAt">
+            <summary>UTC time when the operation finished. Null until <see cref="M:CL.GitHelper.Models.GitDiagnostics.Complete"/> is called.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.Duration">
+            <summary>Total elapsed time. Available after <see cref="M:CL.GitHelper.Models.GitDiagnostics.Complete"/>.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.ObjectCount">
+            <summary>Number of Git objects received or sent.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.BytesTransferred">
+            <summary>Total bytes transferred over the network.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.FilesChanged">
+            <summary>Number of files changed by the operation.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.CommitsProcessed">
+            <summary>Number of commits created or processed.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.Messages">
+            <summary>Timestamped diagnostic messages appended during the operation.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitDiagnostics.Metrics">
+            <summary>Arbitrary key/value metrics for extensibility.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitDiagnostics.Complete">
+            <summary>Records the completion time of the operation.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitDiagnostics.AddMessage(System.String)">
+            <summary>Appends a timestamped message to <see cref="P:CL.GitHelper.Models.GitDiagnostics.Messages"/>.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Models.GitDiagnostics.AddMetric(System.String,System.Object)">
+            <summary>Records an arbitrary metric.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.GitProgress">
+            <summary>
+            Progress snapshot reported during long-running Git operations such as clone or fetch.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.Stage">
+            <summary>Current operation stage (e.g., "Counting objects", "Receiving objects").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.ProgressPercentage">
+            <summary>Progress percentage 0–100.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.ObjectsReceived">
+            <summary>Number of objects received so far.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.TotalObjects">
+            <summary>Total objects expected.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.BytesReceived">
+            <summary>Bytes received so far.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.Message">
+            <summary>Additional detail message.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.GitProgress.Timestamp">
+            <summary>UTC timestamp of this snapshot.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.RepositoryInfo">
+            <summary>
+            Summary information about a Git repository.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.Id">
+            <summary>Configuration ID that created this repository.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.Name">
+            <summary>Human-readable name.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.LocalPath">
+            <summary>Absolute path to the local working directory.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.RemoteUrl">
+            <summary>URL of the first configured remote ("origin").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.CurrentBranch">
+            <summary>Currently checked-out branch name.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.HeadCommitSha">
+            <summary>Full SHA of the HEAD commit.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.IsBare">
+            <summary>Whether this is a bare repository.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.State">
+            <summary>Repository operation state (Normal, Merging, Rebasing, etc.).</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.LocalBranchCount">
+            <summary>Number of local branches.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.RemoteBranchCount">
+            <summary>Number of remote-tracking branches.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.TagCount">
+            <summary>Number of tags.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.StashCount">
+            <summary>Number of stashes.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.IsDirty">
+            <summary>Whether the working tree has uncommitted changes.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.ModifiedFiles">
+            <summary>Count of modified (unstaged) files.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.StagedFiles">
+            <summary>Count of staged (index) files.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryInfo.UntrackedFiles">
+            <summary>Count of untracked files.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.CommitInfo">
+            <summary>
+            Information about a single Git commit.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.Sha">
+            <summary>Full 40-character SHA.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.ShortSha">
+            <summary>Abbreviated 7-character SHA.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.Message">
+            <summary>Full commit message.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.ShortMessage">
+            <summary>First line of the commit message.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.AuthorName">
+            <summary>Author name.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.AuthorEmail">
+            <summary>Author e-mail address.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.AuthorDate">
+            <summary>When the author wrote the commit.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.CommitterName">
+            <summary>Committer name (may differ from author in rebases/cherry-picks).</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.CommitterEmail">
+            <summary>Committer e-mail address.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.CommitDate">
+            <summary>When the commit was recorded in the repository.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitInfo.ParentShas">
+            <summary>SHAs of parent commits (empty for the initial commit, two for merges).</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.BranchInfo">
+            <summary>
+            Information about a Git branch.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.Name">
+            <summary>Canonical ref name (e.g., "refs/heads/main").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.FriendlyName">
+            <summary>Friendly name shown in git output (e.g., "main").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.IsCurrent">
+            <summary>Whether this is the currently checked-out branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.IsRemote">
+            <summary>Whether this is a remote-tracking branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.IsTracking">
+            <summary>Whether this branch tracks a remote branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.TrackedBranchName">
+            <summary>Name of the tracked upstream branch, if any.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.TipSha">
+            <summary>SHA at the tip of this branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.AheadBy">
+            <summary>Commits ahead of the upstream tracking branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.BranchInfo.BehindBy">
+            <summary>Commits behind the upstream tracking branch.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.RepositoryStatus">
+            <summary>
+            Working-tree status of a repository.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.IsDirty">
+            <summary>Whether the repository has any uncommitted changes.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.ModifiedFiles">
+            <summary>Files modified in the working tree but not staged.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.StagedFiles">
+            <summary>Files staged for the next commit.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.UntrackedFiles">
+            <summary>Files not tracked by Git.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.IgnoredFiles">
+            <summary>Files ignored via .gitignore.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.ConflictedFiles">
+            <summary>Files in a merge-conflict state.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.RepositoryStatus.TotalChangedFiles">
+            <summary>Total count of changed (modified + staged + untracked) files.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.FileStatusEntry">
+            <summary>
+            Status of a single file in the working tree or index.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FileStatusEntry.FilePath">
+            <summary>Repository-relative file path.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FileStatusEntry.Status">
+            <summary>Status flags as a string (e.g., "ModifiedInWorkdir").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FileStatusEntry.IsStaged">
+            <summary>Whether the file is staged in the index.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FileStatusEntry.OldFilePath">
+            <summary>Previous path, populated only for renamed files.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.CloneOptions">
+            <summary>
+            Options controlling a <c>git clone</c> operation.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CloneOptions.BranchName">
+            <summary>Branch to check out after cloning. Null uses the remote's default branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CloneOptions.RecurseSubmodules">
+            <summary>Recursively initialise and update submodules after cloning.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CloneOptions.Bare">
+            <summary>Create a bare repository (no working tree).</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CloneOptions.OnProgress">
+            <summary>Invoked with progress updates during the clone. May be null.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CloneOptions.CancellationToken">
+            <summary>Token that can cancel a long-running clone.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.FetchOptions">
+            <summary>
+            Options controlling a <c>git fetch</c> operation.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FetchOptions.RemoteName">
+            <summary>Name of the remote to fetch from (default: "origin").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FetchOptions.Prune">
+            <summary>Delete remote-tracking references that no longer exist on the remote.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FetchOptions.FetchTags">
+            <summary>Also fetch tags from the remote.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FetchOptions.OnProgress">
+            <summary>Invoked with progress updates during the fetch. May be null.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.FetchOptions.CancellationToken">
+            <summary>Token that can cancel the operation.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.PullOptions">
+            <summary>
+            Options controlling a <c>git pull</c> operation.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PullOptions.RemoteName">
+            <summary>Name of the remote to pull from (default: "origin").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PullOptions.Strategy">
+            <summary>Integration strategy to apply after fetch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PullOptions.FetchOptions">
+            <summary>Fetch options used for the fetch step.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PullOptions.CancellationToken">
+            <summary>Token that can cancel the operation.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.CommitOptions">
+            <summary>
+            Options controlling a <c>git commit</c> operation.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitOptions.Message">
+            <summary>Commit message. Must not be empty.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitOptions.AuthorName">
+            <summary>Override the author name. Null reads from the repository's <c>user.name</c> config.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitOptions.AuthorEmail">
+            <summary>Override the author e-mail. Null reads from the repository's <c>user.email</c> config.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.CommitOptions.FilesToStage">
+            <summary>
+            Specific files to stage before committing.
+            Null commits whatever is already staged in the index.
+            </summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.PushOptions">
+            <summary>
+            Options controlling a <c>git push</c> operation.
+            </summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PushOptions.RemoteName">
+            <summary>Remote to push to (default: "origin").</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PushOptions.BranchName">
+            <summary>Branch to push. Null pushes the currently checked-out branch.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PushOptions.Force">
+            <summary>Whether to force-push (rewrites remote history — use with care).</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PushOptions.PushTags">
+            <summary>Also push all local tags.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PushOptions.OnProgress">
+            <summary>Invoked with progress updates during the push. May be null.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Models.PushOptions.CancellationToken">
+            <summary>Token that can cancel the operation.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Models.MergeStrategy">
+            <summary>
+            Integration strategy for <c>git pull</c>.
+            </summary>
+        </member>
+        <member name="F:CL.GitHelper.Models.MergeStrategy.Merge">
+            <summary>Standard three-way merge commit.</summary>
+        </member>
+        <member name="F:CL.GitHelper.Models.MergeStrategy.Rebase">
+            <summary>Rebase local commits on top of the fetched tip.</summary>
+        </member>
+        <member name="F:CL.GitHelper.Models.MergeStrategy.FastForwardOnly">
+            <summary>Only accept fast-forward merges — abort if not possible.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Services.GitManager">
+            <summary>
+            Manages a pool of <see cref="T:CL.GitHelper.Services.GitRepository"/> instances.
+            Resolves local paths, applies caching, and exposes batch operations across all configured repositories.
+            </summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.#ctor(CL.GitHelper.Models.GitHelperConfig,System.String,CodeLogic.Core.Logging.ILogger)">
+            <summary>
+            Initialises the manager.
+            </summary>
+            <param name="config">The loaded Git configuration.</param>
+            <param name="baseDirectory">
+            Absolute base directory used to resolve relative <see cref="P:CL.GitHelper.Models.RepositoryConfiguration.LocalPath"/> values.
+            </param>
+            <param name="logger">Optional scoped logger.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.GetRepositoryAsync(System.String)">
+            <summary>
+            Returns a <see cref="T:CL.GitHelper.Services.GitRepository"/> for the given configuration ID.
+            Caches the instance when caching is enabled.
+            </summary>
+            <param name="repositoryId">Repository configuration ID (default: "Default").</param>
+            <exception cref="T:System.ArgumentException">Thrown when no configuration matches <paramref name="repositoryId"/>.</exception>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.GetRepositoryIds">
+            <summary>Returns IDs of all configured repositories.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.GetConfiguration(System.String)">
+            <summary>Returns the <see cref="T:CL.GitHelper.Models.RepositoryConfiguration"/> for the given ID, or null.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.RegisterRepository(CL.GitHelper.Models.RepositoryConfiguration)">
+            <summary>
+            Adds a new repository configuration at runtime.
+            </summary>
+            <param name="configuration">Configuration to add. Must be valid and have a unique ID.</param>
+            <exception cref="T:System.ArgumentException">Thrown when a configuration with the same ID already exists or is invalid.</exception>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.UnregisterRepositoryAsync(System.String)">
+            <summary>
+            Removes a repository configuration and evicts any cached instance.
+            </summary>
+            <param name="repositoryId">ID of the repository to remove.</param>
+            <returns>True if the configuration was found and removed.</returns>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.EvictFromCacheAsync(System.String)">
+            <summary>Removes and disposes a single cached repository.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.ClearCacheAsync">
+            <summary>Removes and disposes all cached repositories.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.GetCacheStats">
+            <summary>Returns a snapshot of the current cache state.</summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.ExecuteOnAllAsync``1(System.Func{CL.GitHelper.Services.GitRepository,System.String,System.Threading.Tasks.Task{``0}},System.Int32)">
+            <summary>
+            Runs a delegate on every configured repository with bounded concurrency.
+            </summary>
+            <param name="operation">The operation to run. Receives the repository and its ID.</param>
+            <param name="maxConcurrency">Maximum parallel operations. 0 = use <see cref="P:CL.GitHelper.Models.GitHelperConfig.MaxConcurrentOperations"/>.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.FetchAllAsync(CL.GitHelper.Models.FetchOptions,System.Int32)">
+            <summary>
+            Fetches all configured repositories concurrently.
+            </summary>
+            <param name="fetchOptions">Options applied to every fetch. Null uses defaults.</param>
+            <param name="maxConcurrency">Maximum parallel fetches. 0 = use configuration default.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.GetAllStatusAsync(System.Int32)">
+            <summary>
+            Retrieves the working-tree status of all configured repositories concurrently.
+            </summary>
+            <param name="maxConcurrency">Maximum parallel status checks. 0 = use configuration default.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.HealthCheckAsync">
+            <summary>
+            Performs a health check on every configured repository.
+            </summary>
+            <returns>Dictionary mapping repository ID → healthy flag.</returns>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitManager.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.GitHelper.Services.CacheStats">
+            <summary>Snapshot of the repository cache state.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheStats.CacheEnabled">
+            <summary>Whether caching is enabled in the configuration.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheStats.CacheTimeoutMinutes">
+            <summary>Configured cache entry lifetime in minutes.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheStats.Entries">
+            <summary>Per-entry details.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheStats.TotalCached">
+            <summary>Total number of currently cached entries.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Services.CacheEntryStats">
+            <summary>Statistics for a single cached repository entry.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheEntryStats.RepositoryId">
+            <summary>Repository configuration ID.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheEntryStats.Age">
+            <summary>How long this entry has been in the cache.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheEntryStats.TimeSinceLastAccess">
+            <summary>Time elapsed since the entry was last accessed.</summary>
+        </member>
+        <member name="P:CL.GitHelper.Services.CacheEntryStats.IsExpired">
+            <summary>Whether this entry has exceeded the configured timeout.</summary>
+        </member>
+        <member name="T:CL.GitHelper.Services.GitRepository">
+            <summary>
+            Wraps a LibGit2Sharp <see cref="T:LibGit2Sharp.Repository"/> and exposes typed Git operations.
+            Instances are created and cached by <see cref="T:CL.GitHelper.Services.GitManager"/>.
+            All write operations are guarded by an async semaphore to prevent concurrent access.
+            </summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.#ctor(CL.GitHelper.Models.RepositoryConfiguration,System.String,CodeLogic.Core.Logging.ILogger)">
+            <summary>Initialises the repository service.</summary>
+            <param name="config">Repository configuration entry.</param>
+            <param name="resolvedPath">Absolute local path (pre-resolved by <see cref="T:CL.GitHelper.Services.GitManager"/>).</param>
+            <param name="logger">Optional scoped logger.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.CloneAsync(CL.GitHelper.Models.CloneOptions)">
+            <summary>
+            Clones the configured remote repository into the local path.
+            Fails if the local directory already exists and is non-empty.
+            </summary>
+            <param name="options">Optional clone settings.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.FetchAsync(CL.GitHelper.Models.FetchOptions)">
+            <summary>
+            Fetches changes from the configured remote without merging.
+            </summary>
+            <param name="options">Optional fetch settings.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.PullAsync(CL.GitHelper.Models.PullOptions)">
+            <summary>
+            Fetches and integrates remote changes.
+            </summary>
+            <param name="options">Optional pull settings.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.PushAsync(CL.GitHelper.Models.PushOptions)">
+            <summary>
+            Pushes local commits to the remote.
+            </summary>
+            <param name="options">Optional push settings.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.CommitAsync(CL.GitHelper.Models.CommitOptions)">
+            <summary>
+            Creates a commit from the current index.
+            Optionally stages specific files before committing.
+            </summary>
+            <param name="options">Commit options including message and optional files to stage.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.GetStatusAsync">
+            <summary>
+            Returns the current working-tree status of the repository.
+            </summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.GetRepositoryInfoAsync">
+            <summary>
+            Returns summary metadata about the repository.
+            </summary>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.ListBranchesAsync(System.Boolean)">
+            <summary>
+            Lists all branches in the repository.
+            </summary>
+            <param name="includeRemote">When true, remote-tracking branches are included.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.CheckoutBranchAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Checks out the named branch.
+            </summary>
+            <param name="branchName">Branch to check out.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.GetCommitLogAsync(System.Int32)">
+            <summary>
+            Retrieves the commit log for the current branch.
+            </summary>
+            <param name="maxCount">Maximum number of commits to return. 0 returns all.</param>
+        </member>
+        <member name="M:CL.GitHelper.Services.GitRepository.Dispose">
+            <inheritdoc/>
+        </member>
+    </members>
+</doc>

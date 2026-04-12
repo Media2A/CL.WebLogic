@@ -1,0 +1,23 @@
+{layout:layouts/main}
+
+<section class="auth-shell">
+    <div class="auth-panel">
+        <div class="alert {model:message_class}" style="{model:message_style}">{model:message}</div>
+        <form method="post" action="/login" class="auth-form">
+            <input type="hidden" name="returnUrl" value="{model:return_url}">
+            <div>
+                <label class="form-label" for="userId">Handle or user id</label>
+                <input class="form-control" id="userId" name="userId" type="text" autocomplete="username">
+            </div>
+            <div>
+                <label class="form-label" for="password">Password</label>
+                <input class="form-control" id="password" name="password" type="password" autocomplete="current-password">
+            </div>
+            <button class="btn btn-ink" type="submit">Sign in</button>
+        </form>
+    </div>
+    <div class="auth-demo">
+        <h3>Seeded demo accounts</h3>
+        {raw:model:demo_accounts}
+    </div>
+</section>

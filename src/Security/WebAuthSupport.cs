@@ -39,6 +39,7 @@ public sealed class WebIdentityProfile
     public string DisplayName { get; init; } = string.Empty;
     public bool IsActive { get; init; } = true;
     public IReadOnlyCollection<string> AccessGroups { get; init; } = [];
+    public IReadOnlyCollection<string> Permissions { get; init; } = [];
 }
 
 public sealed class DefaultWebAuthResolver : IWebAuthResolver
@@ -78,7 +79,8 @@ public sealed class DefaultWebAuthResolver : IWebAuthResolver
         if (string.IsNullOrWhiteSpace(userId) && _config.AllowHeaderUserId)
             userId = httpContext.Request.Headers["X-WebLogic-UserId"].ToString();
 
-        if (!string.IsNullOrWhiteSpace(userId) && _identityStore is not null)
+        // Only hit the identity store DB if we have no session data at all
+        if (!string.IsNullOrWhiteSpace(userId) && _identityStore is not null && accessGroups.Count == 0)
         {
             var profile = await _identityStore.GetIdentityAsync(userId).ConfigureAwait(false);
             if (profile is not null && profile.IsActive)
@@ -89,7 +91,11 @@ public sealed class DefaultWebAuthResolver : IWebAuthResolver
             }
         }
 
-        return new WebRequestIdentity(userId, accessGroups);
+        // Permissions: check session first (legacy), then let the identity resolve from profile
+        var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddValues(permissions, httpContext.Session.GetString("weblogic.permissions"));
+
+        return new WebRequestIdentity(userId, accessGroups, permissions);
     }
 
     private static void AddValues(ISet<string> values, string? raw)

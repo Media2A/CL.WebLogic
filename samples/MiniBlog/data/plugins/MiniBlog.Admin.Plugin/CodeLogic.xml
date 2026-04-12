@@ -1,0 +1,2301 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CodeLogic</name>
+    </assembly>
+    <members>
+        <member name="T:CodeLogic.CodeLogic">
+            <summary>
+            Static facade for the CodeLogic framework.
+            Delegates all calls to a singleton <see cref="T:CodeLogic.CodeLogicRuntime"/> instance.
+            This is the primary entry point for most applications.
+            <para>
+            Typical usage:
+            <code>
+            var result = await CodeLogic.InitializeAsync(o => o.AppVersion = "1.0.0");
+            if (result.ShouldExit) return;
+            await Libraries.LoadAsync&lt;MyLibrary&gt;();
+            CodeLogic.RegisterApplication(new MyApp());
+            await CodeLogic.ConfigureAsync();
+            await CodeLogic.StartAsync();
+            </code>
+            </para>
+            For testing or advanced scenarios, use <see cref="T:CodeLogic.ICodeLogicRuntime"/> directly.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})">
+            <summary>
+            Initializes the framework. Parses CLI args, scaffolds directories on first run,
+            loads CodeLogic.json, and prepares the LibraryManager.
+            CLI args are merged on top of programmatic options (CLI wins on conflicts).
+            </summary>
+            <param name="configure">Optional delegate to set <see cref="T:CodeLogic.CodeLogicOptions"/> properties.</param>
+            <returns>
+            An <see cref="T:CodeLogic.InitializationResult"/> — check <c>ShouldExit</c> before continuing.
+            A result with <c>ShouldExit = true</c> means a CLI flag like <c>--version</c> was handled.
+            </returns>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.RegisterApplication(CodeLogic.Framework.Application.IApplication)">
+            <summary>
+            Registers the consuming application with the runtime.
+            Must be called after <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> and before <see cref="M:CodeLogic.CodeLogic.ConfigureAsync"/>.
+            </summary>
+            <param name="application">The application instance implementing <see cref="T:CodeLogic.Framework.Application.IApplication"/>.</param>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.ConfigureAsync">
+            <summary>
+            Configures the application: discovers DLL libraries, runs <c>OnConfigureAsync</c>,
+            and generates/loads all config and localization files.
+            Call after registering all libraries and the application.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.StartAsync">
+            <summary>
+            Starts all libraries and the application in the correct dependency order.
+            Runs the full Configure → Initialize → Start sequence for libraries,
+            then Initialize → Start for the application.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.StopAsync">
+            <summary>
+            Gracefully stops the application, then all plugins, then all libraries in reverse order.
+            Called automatically on CTRL+C and process exit when
+            <see cref="P:CodeLogic.CodeLogicOptions.HandleShutdownSignals"/> is true.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.ResetAsync">
+            <summary>
+            Stops everything and resets the runtime to its uninitialized state.
+            After calling this, <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> may be called again.
+            Primarily useful in integration tests.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetHealthAsync">
+            <summary>
+            Runs a health check across all libraries, plugins, and the application.
+            Returns a <see cref="T:CodeLogic.HealthReport"/> with per-component status and an overall flag.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetLibraryManager">
+            <summary>
+            Returns the <see cref="T:CodeLogic.Framework.Libraries.LibraryManager"/>, or null if not yet initialized.
+            Prefer the <see cref="T:CodeLogic.Libraries"/> facade for day-to-day library access.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetApplication">
+            <summary>
+            Returns the registered <see cref="T:CodeLogic.Framework.Application.IApplication"/>, or null if none has been registered.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetApplicationContext">
+            <summary>
+            Returns the <see cref="T:CodeLogic.Framework.Application.ApplicationContext"/> created during <see cref="M:CodeLogic.CodeLogic.ConfigureAsync"/>,
+            or null if the application has not been configured.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetEventBus">
+            <summary>
+            Returns the shared <see cref="T:CodeLogic.Core.Events.IEventBus"/> instance.
+            Available immediately after construction — even before <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetOptions">
+            <summary>
+            Returns the effective <see cref="T:CodeLogic.CodeLogicOptions"/>.
+            Throws <see cref="T:System.InvalidOperationException"/> if called before <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetConfiguration">
+            <summary>
+            Returns the deserialized <see cref="T:CodeLogic.CodeLogicConfiguration"/> from CodeLogic.json.
+            Throws <see cref="T:System.InvalidOperationException"/> if called before <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.SetPluginManager(CodeLogic.Framework.Application.Plugins.PluginManager)">
+            <summary>
+            Registers an app-managed PluginManager so it participates in health
+            checks and graceful shutdown. Call after InitializeAsync.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogic.GetPluginManager">
+            <summary>
+            Returns the registered <see cref="T:CodeLogic.Framework.Application.Plugins.PluginManager"/>, or null if none has been registered.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.CodeLogicEnvironment">
+            <summary>
+            Provides read-only runtime environment information.
+            AppVersion is set by the consuming application via CodeLogicOptions.AppVersion.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicEnvironment.MachineName">
+            <summary>The machine name from the operating system.</summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicEnvironment.AppRootPath">
+            <summary>The application base directory (where the executable lives).</summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicEnvironment.AppVersion">
+            <summary>
+            The application version. Set automatically from CodeLogicOptions.AppVersion
+            during InitializeAsync. Defaults to "0.0.0".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicEnvironment.IsDebugging">
+            <summary>
+            Returns true if a debugger is currently attached to this process.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicEnvironment.IsDevelopment">
+            <summary>
+            Returns true when running in development mode.
+            True if debugger is attached OR if this is a DEBUG build.
+            Mirrors the framework's config file selection logic:
+              IsDevelopment = true  → CodeLogic.Development.json
+              IsDevelopment = false → CodeLogic.json
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Configuration.ConfigModelBase">
+            <summary>
+            Base class for all CodeLogic configuration models.
+            Inherit from this and use DataAnnotations attributes for validation.
+            Override Validate() for custom validation logic.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.ConfigModelBase.Validate">
+            <summary>
+            Validates this configuration model using DataAnnotations and any
+            custom logic in overriding classes.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Configuration.ConfigSectionAttribute">
+            <summary>
+            Marks a configuration model with a section name used in file naming.
+            Example: [ConfigSection("database")] → config.database.json
+            Without this attribute, the file name is config.json.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Configuration.ConfigSectionAttribute.SectionName">
+            <summary>
+            The section name used as a suffix in the config file name.
+            Example: "database" → config file is named <c>config.database.json</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Configuration.ConfigSectionAttribute.Version">
+            <summary>
+            Schema version for the config section. Informational — not used for migration.
+            Default: 1.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.ConfigSectionAttribute.#ctor(System.String)">
+            <summary>
+            Initializes the attribute with a section name.
+            </summary>
+            <param name="sectionName">The suffix for the config file name (e.g., "database").</param>
+        </member>
+        <member name="T:CodeLogic.Core.Configuration.ConfigurationManager">
+            <summary>
+            File-based JSON configuration manager for a single component.
+            Thread-safe for concurrent reads; writes use file system atomicity.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Configuration.IConfigurationManager">
+            <summary>
+            Manages configuration files for a single component (library, application, or plugin).
+            Supports multiple config files per component:
+              Register&lt;MainConfig&gt;()           → config.json
+              Register&lt;DatabaseConfig&gt;("db")   → config.db.json
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.Register``1(System.String)">
+            <summary>Registers a config type for this component.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.Get``1">
+            <summary>Gets a loaded config instance. Throws if not loaded.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.GenerateDefaultAsync``1(System.Boolean)">
+            <summary>Generates the config file with defaults if it doesn't exist, or overwrites it when <paramref name="force"/> is true.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.LoadAsync``1(System.Boolean)">
+            <summary>Loads a config from disk. Generates defaults if missing when <paramref name="generateIfMissing"/> is true. Validates after load.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.SaveAsync``1(``0)">
+            <summary>
+            Saves config to disk. Validates before writing — throws if invalid.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.GenerateAllDefaultsAsync(System.Boolean)">
+            <summary>Generates defaults for all registered types that don't have files yet, or overwrites them when <paramref name="force"/> is true.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.LoadAllAsync(System.Boolean)">
+            <summary>Loads all registered configs. Generates missing files only when <paramref name="generateIfMissing"/> is true.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.ValidateAllAsync(System.Boolean)">
+            <summary>Validates all registered config files that already exist on disk. Missing files are allowed only when <paramref name="allowMissingFiles"/> is true.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.ReloadAsync``1">
+            <summary>
+            Reloads a specific config from disk and updates the in-memory instance.
+            Safe for: log levels, intervals, pool sizes.
+            NOT safe for: connection strings, paths, core settings (requires restart).
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.ReloadAllAsync">
+            <summary>Reloads all registered configs from disk.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Configuration.IConfigurationManager.GetRegisteredFilePaths">
+            <summary>Returns the on-disk paths for all registered config files.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.EventBus">
+            <summary>
+            Thread-safe in-process event bus.
+            One instance is shared across all library, application, and plugin contexts.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.LibraryStartedEvent">
+            <summary>Published when a library completes OnStartAsync successfully.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.LibraryStartedEvent.#ctor(System.String,System.String)">
+            <summary>Published when a library completes OnStartAsync successfully.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.LibraryStoppedEvent">
+            <summary>Published when a library completes OnStopAsync.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.LibraryStoppedEvent.#ctor(System.String,System.String)">
+            <summary>Published when a library completes OnStopAsync.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.LibraryFailedEvent">
+            <summary>Published when a library throws during any lifecycle phase.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.LibraryFailedEvent.#ctor(System.String,System.String,System.Exception)">
+            <summary>Published when a library throws during any lifecycle phase.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.PluginLoadedEvent">
+            <summary>Published when a plugin is successfully loaded.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.PluginLoadedEvent.#ctor(System.String,System.String)">
+            <summary>Published when a plugin is successfully loaded.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.PluginUnloadedEvent">
+            <summary>Published when a plugin is unloaded.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.PluginUnloadedEvent.#ctor(System.String,System.String)">
+            <summary>Published when a plugin is unloaded.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.PluginFailedEvent">
+            <summary>Published when a plugin throws during load or unload.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.PluginFailedEvent.#ctor(System.String,System.String,System.Exception)">
+            <summary>Published when a plugin throws during load or unload.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.ConfigReloadedEvent">
+            <summary>Published after a specific config type is reloaded from disk.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.ConfigReloadedEvent.#ctor(System.String,System.Type)">
+            <summary>Published after a specific config type is reloaded from disk.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.LocalizationReloadedEvent">
+            <summary>Published after all localizations are reloaded from disk.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.LocalizationReloadedEvent.#ctor(System.String)">
+            <summary>Published after all localizations are reloaded from disk.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.HealthCheckCompletedEvent">
+            <summary>Published after a scheduled health check round completes.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.HealthCheckCompletedEvent.#ctor(System.String,System.Boolean,System.String)">
+            <summary>Published after a scheduled health check round completes.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.ShutdownRequestedEvent">
+            <summary>Published when the framework begins shutting down.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.ShutdownRequestedEvent.#ctor(System.String)">
+            <summary>Published when the framework begins shutting down.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.ComponentAlertEvent">
+            <summary>
+            Generic bridge event for lib-to-lib signals where a direct type reference
+            would create unwanted coupling. Scope with ComponentId + AlertType.
+            Example: ComponentId="cl.sqlite", AlertType="connection.lost"
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.ComponentAlertEvent.#ctor(System.String,System.String,System.String,System.Object)">
+            <summary>
+            Generic bridge event for lib-to-lib signals where a direct type reference
+            would create unwanted coupling. Scope with ComponentId + AlertType.
+            Example: ComponentId="cl.sqlite", AlertType="connection.lost"
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.IEvent">
+            <summary>
+            Marker interface for all events in the CodeLogic event bus.
+            Implement this on record or class types to make them publishable.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.IEventBus.Publish``1(``0)">
+            <summary>
+            Publishes an event to all subscribers.
+            Sync subscribers are called immediately on the calling thread.
+            Async subscribers are fired-and-forgotten (not awaited).
+            Use PublishAsync to await async subscribers.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.IEventBus.PublishAsync``1(``0)">
+            <summary>
+            Publishes an event and awaits all subscribers (sync and async).
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.IEventBus.Subscribe``1(System.Action{``0})">
+            <summary>
+            Subscribes a synchronous handler for events of type T.
+            Returns a subscription that can be disposed to unsubscribe.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Events.IEventBus.SubscribeAsync``1(System.Func{``0,System.Threading.Tasks.Task})">
+            <summary>
+            Subscribes an asynchronous handler for events of type T.
+            Returns a subscription that can be disposed to unsubscribe.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Events.IEventSubscription">
+            <summary>
+            Represents an active event subscription.
+            Dispose to unsubscribe and stop receiving events.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Localization.ILocalizationManager">
+            <summary>
+            Manages localization files for a single component.
+            Each component has per-culture JSON files in its localization/ directory.
+            Non-default cultures fall back to the default culture for missing keys.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.Register``1">
+            <summary>Registers a localization model type.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.Get``1(System.String)">
+            <summary>
+            Gets the localization instance for the given culture.
+            Falls back to the default culture if the requested one is not available.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.GenerateTemplatesAsync``1(System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>Generates template files for each culture if they don't exist.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.LoadAsync``1(System.Collections.Generic.IReadOnlyList{System.String},System.Boolean)">
+            <summary>Loads localization files for the given cultures. Generates missing templates only when <paramref name="generateIfMissing"/> is true. Merges non-default cultures with the default.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.GenerateAllTemplatesAsync(System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>Generates templates for all registered types and all cultures.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.LoadAllAsync(System.Collections.Generic.IReadOnlyList{System.String},System.Boolean)">
+            <summary>Loads all registered types for all cultures. Generates missing templates only when <paramref name="generateIfMissing"/> is true.</summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.ReloadAllAsync(System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>
+            Reloads all localizations from disk. Always safe — pure string data.
+            Useful for live translation updates without restart.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.ILocalizationManager.GetLoadedCultures``1">
+            <summary>Returns the list of culture codes that have been successfully loaded.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Localization.LocalizationManager">
+            <summary>
+            File-based localization manager for a single component.
+            Files live in the component's localization/ directory.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Localization.LocalizationModelBase">
+            <summary>
+            Base class for all localization string models.
+            Define string properties with English default values.
+            The localization system serializes these to JSON files per culture.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Localization.LocalizationModelBase.Culture">
+            <summary>Culture code for this localization instance (e.g. "en-US", "da-DK").</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Localization.LocalizationSectionAttribute">
+            <summary>
+            Specifies the section name used in localization file naming.
+            Example: [LocalizationSection("homepoint")] → homepoint.en-US.json
+            Without this attribute, the type name is used.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Localization.LocalizationSectionAttribute.SectionName">
+            <summary>
+            The prefix used in the localization file name.
+            Example: "homepoint" → file is named <c>homepoint.en-US.json</c>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Localization.LocalizationSectionAttribute.#ctor(System.String)">
+            <summary>
+            Initializes the attribute with a section name.
+            </summary>
+            <param name="sectionName">The file name prefix (e.g., "homepoint").</param>
+        </member>
+        <member name="T:CodeLogic.Core.Localization.LocalizedStringAttribute">
+            <summary>
+            Documents a localized string property for translators.
+            Has no runtime effect — purely informational.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Logging.ILogger">
+            <summary>
+            Provides structured log writing for a single named component (library, application, or plugin).
+            Each component receives its own scoped logger from its context object.
+            Log entries are written to disk (and optionally to the console) based on configured levels.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Trace(System.String)">
+            <summary>
+            Logs a trace-level message. The most verbose level — for fine-grained
+            execution flow tracing. Disabled by default in all environments.
+            </summary>
+            <param name="message">The message to log.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Debug(System.String)">
+            <summary>
+            Logs a debug-level message. Intended for diagnostic information during development.
+            Enabled by default in development (CodeLogic.Development.json sets GlobalLevel to Debug).
+            </summary>
+            <param name="message">The message to log.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Info(System.String)">
+            <summary>
+            Logs an informational message about normal application flow.
+            Use for significant milestones (startup, connections established, jobs completed).
+            </summary>
+            <param name="message">The message to log.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Warning(System.String)">
+            <summary>
+            Logs a warning — an unexpected condition that the application can recover from.
+            Warnings do not halt execution but should be investigated.
+            This is the default minimum log level in production.
+            </summary>
+            <param name="message">The message to log.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Error(System.String,System.Exception)">
+            <summary>
+            Logs an error — a failure in the current operation.
+            The application can continue but the operation did not succeed.
+            </summary>
+            <param name="message">The message to log.</param>
+            <param name="exception">Optional exception to include in the log entry.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Critical(System.String,System.Exception)">
+            <summary>
+            Logs a critical error — a severe failure that may require immediate attention
+            or will cause the application to shut down.
+            </summary>
+            <param name="message">The message to log.</param>
+            <param name="exception">Optional exception to include in the log entry.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Debug(System.String,System.Object[])">
+            <summary>
+            Logs a formatted debug message using <see cref="M:System.String.Format(System.String,System.Object[])"/>.
+            </summary>
+            <param name="message">A composite format string.</param>
+            <param name="args">Arguments to substitute into the format string.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Info(System.String,System.Object[])">
+            <summary>
+            Logs a formatted informational message using <see cref="M:System.String.Format(System.String,System.Object[])"/>.
+            </summary>
+            <param name="message">A composite format string.</param>
+            <param name="args">Arguments to substitute into the format string.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Warning(System.String,System.Object[])">
+            <summary>
+            Logs a formatted warning message using <see cref="M:System.String.Format(System.String,System.Object[])"/>.
+            </summary>
+            <param name="message">A composite format string.</param>
+            <param name="args">Arguments to substitute into the format string.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.ILogger.Error(System.String,System.Object[])">
+            <summary>
+            Logs a formatted error message using <see cref="M:System.String.Format(System.String,System.Object[])"/>.
+            </summary>
+            <param name="message">A composite format string.</param>
+            <param name="args">Arguments to substitute into the format string.</param>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LoggingMode.SingleFile">
+            <summary>
+            Single rolling file per component. Default.
+            Rolls when MaxFileSizeMb is reached. Keeps MaxRolledFiles old files.
+            Files: component.log, component.1.log, component.2.log, ...
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LoggingMode.DateFolder">
+            <summary>
+            Files sorted into year/month/day subdirectories.
+            Pattern configurable via FileNamePattern.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Logging.LoggingOptions">
+            <summary>
+            Runtime logging configuration passed to the <see cref="T:CodeLogic.Core.Logging.Logger"/> constructor.
+            Produced from <see cref="P:CodeLogic.CodeLogicConfiguration.Logging"/> via <c>ToLoggingOptions()</c>.
+            Can also be constructed manually for testing or custom components.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.Mode">
+            <summary>
+            Log file organization mode: rolling single file or date-sorted folders.
+            Default: <see cref="F:CodeLogic.Core.Logging.LoggingMode.SingleFile"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.MaxFileSizeMb">
+            <summary>
+            Maximum size of a single log file in megabytes before it rolls over.
+            Applies only in <see cref="F:CodeLogic.Core.Logging.LoggingMode.SingleFile"/> mode. Default: 10.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.MaxRolledFiles">
+            <summary>
+            Number of old (rolled) log files to keep. Oldest are deleted when the limit is exceeded.
+            Applies only in <see cref="F:CodeLogic.Core.Logging.LoggingMode.SingleFile"/> mode. Default: 5.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.FileNamePattern">
+            <summary>
+            File name pattern used in <see cref="F:CodeLogic.Core.Logging.LoggingMode.DateFolder"/> mode.
+            Supports <c>{date:format}</c> and <c>{level}</c> tokens.
+            Default: <c>"{date:yyyy}/{date:MM}/{date:dd}/{level}.log"</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.GlobalLevel">
+            <summary>
+            Minimum log level written to disk. Entries below this level are discarded.
+            Default: <see cref="F:CodeLogic.Core.Logging.LogLevel.Warning"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.EnableDebugMode">
+            <summary>
+            When true, enables verbose debug output mode. Default: false.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.CentralizedDebugLog">
+            <summary>
+            When true, all component loggers also write to a shared centralized debug log file.
+            Default: false.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.CentralizedLogsPath">
+            <summary>
+            Override path for the centralized debug log file.
+            When null, defaults to <c>{FrameworkRoot}/Framework/logs/debug.log</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.EnableConsoleOutput">
+            <summary>
+            When true, log entries are also written to the console (stdout). Default: false.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.ConsoleMinimumLevel">
+            <summary>
+            Minimum log level written to the console when <see cref="P:CodeLogic.Core.Logging.LoggingOptions.EnableConsoleOutput"/> is true.
+            Default: <see cref="F:CodeLogic.Core.Logging.LogLevel.Debug"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.TimestampFormat">
+            <summary>
+            Timestamp format string applied to each log entry.
+            Default: <c>"yyyy-MM-dd HH:mm:ss.fff"</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Logging.LoggingOptions.IncludeMachineName">
+            <summary>
+            When true, the machine name is prepended to each log entry.
+            Useful when aggregating logs from multiple machines. Default: true.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Logging.LoggingOptions.CreateWithDebugDefaults">
+            <summary>
+            Creates <see cref="T:CodeLogic.Core.Logging.LoggingOptions"/> with debug-aware defaults.
+            When a debugger is attached: sets <see cref="P:CodeLogic.Core.Logging.LoggingOptions.GlobalLevel"/> to Debug,
+            enables console output, and enables debug mode.
+            When no debugger: returns quiet defaults (Warning level, no console).
+            Individual properties can be overridden after calling this method.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Logging.LogLevel">
+            <summary>
+            Severity levels for log messages, ordered from least to most severe.
+            Configure the minimum level via <see cref="P:CodeLogic.LoggingConfig.GlobalLevel"/> in CodeLogic.json.
+            Messages below the configured level are silently discarded.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LogLevel.Trace">
+            <summary>
+            The most verbose level — extremely detailed execution traces.
+            Use sparingly; can generate enormous log volume.
+            Typically only enabled when diagnosing specific bugs in isolation.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LogLevel.Debug">
+            <summary>
+            Diagnostic information useful during development and debugging.
+            Enabled by default in development (via CodeLogic.Development.json).
+            Disabled in production to avoid log noise.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LogLevel.Info">
+            <summary>
+            Normal application events worth recording: startup, connections, job completions.
+            Use for significant milestones that are expected during healthy operation.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LogLevel.Warning">
+            <summary>
+            Unexpected conditions that the application can recover from.
+            Examples: a retried operation, a missing optional resource, a deprecated API call.
+            This is the default minimum level in production (CodeLogic.json).
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LogLevel.Error">
+            <summary>
+            A failure in the current operation that the application can continue running despite.
+            Examples: a failed API call, a failed database query, an unhandled exception in a background task.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.LogLevel.Critical">
+            <summary>
+            A severe failure that typically requires immediate attention or signals imminent shutdown.
+            Examples: startup failure, unrecoverable database corruption, out-of-memory conditions.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Logging.NullLogger">
+            <summary>
+            A no-op logger that discards all log messages.
+            Use for testing or when logging is optional.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Logging.NullLogger.Instance">
+            <summary>Shared singleton instance.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Results.Error">
+            <summary>
+            Represents a structured error with a machine-readable code, human-readable message,
+            optional details, and optional inner error for chaining.
+            Use the static factory methods rather than constructing directly.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Results.Error.Code">
+            <summary>
+            Machine-readable error code in <c>"category.specific_issue"</c> format.
+            Examples: <c>"user.not_found"</c>, <c>"db.connection_failed"</c>.
+            Use constants from <see cref="T:CodeLogic.Core.Results.ErrorCode"/> for framework errors.
+            Libraries should define their own codes following the same convention.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Results.Error.Message">
+            <summary>
+            Human-readable description of the error. Suitable for logging and display.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Results.Error.Details">
+            <summary>
+            Optional additional context (e.g., the field name, the invalid value, the file path).
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Core.Results.Error.InnerError">
+            <summary>
+            Optional chained inner error that caused this error.
+            Enables building error chains similar to exception inner exceptions.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.NotFound(System.String,System.String,System.String)">
+            <summary>
+            Creates an error representing a resource that could not be found.
+            HTTP analog: 404 Not Found.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.Validation(System.String,System.String,System.String)">
+            <summary>
+            Creates an error representing a validation failure (invalid input data).
+            HTTP analog: 422 Unprocessable Entity.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.Internal(System.String,System.String,System.String,CodeLogic.Core.Results.Error)">
+            <summary>
+            Creates an error representing an internal/unexpected failure.
+            HTTP analog: 500 Internal Server Error.
+            </summary>
+            <param name="innerError">Optional chained error that caused this failure.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.Unauthorized(System.String,System.String,System.String)">
+            <summary>
+            Creates an error representing an authentication failure.
+            HTTP analog: 401 Unauthorized.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.Conflict(System.String,System.String,System.String)">
+            <summary>
+            Creates an error representing a conflict with current state (duplicate, concurrent modification).
+            HTTP analog: 409 Conflict.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.Timeout(System.String,System.String,System.String)">
+            <summary>
+            Creates an error representing an operation that exceeded its time limit.
+            HTTP analog: 408 Request Timeout / 504 Gateway Timeout.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.Unavailable(System.String,System.String,System.String)">
+            <summary>
+            Creates an error representing a service or dependency that is temporarily unavailable.
+            HTTP analog: 503 Service Unavailable.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.FromException(System.Exception,System.String)">
+            <summary>
+            Wraps an exception as an internal error.
+            The exception message becomes the error message; the exception type name becomes the details.
+            </summary>
+            <param name="ex">The exception to wrap.</param>
+            <param name="code">Error code to use. Default: "internal.exception".</param>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.WithInner(CodeLogic.Core.Results.Error)">
+            <summary>
+            Returns a new Error with the given inner error attached.
+            Use this to chain errors without mutating the original.
+            </summary>
+            <param name="inner">The root cause error.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.WithDetails(System.String)">
+            <summary>
+            Returns a new Error with the given details string.
+            Use this to add context without mutating the original.
+            </summary>
+            <param name="details">Additional context to attach.</param>
+        </member>
+        <member name="M:CodeLogic.Core.Results.Error.ToString">
+            <summary>
+            Returns a string representation: <c>[code] message (details) → innerError</c>.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Results.ErrorCode">
+            <summary>
+            Well-known error code constants. Format: <c>"category.specific_issue"</c>.
+            Libraries may define their own codes following the same convention.
+            These constants are intended to be used with the <see cref="T:CodeLogic.Core.Results.Error"/> factory methods.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.NotFound">
+            <summary>The requested resource does not exist.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.AlreadyExists">
+            <summary>A resource with this identity already exists.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.InvalidArgument">
+            <summary>An argument provided to an operation is invalid.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.InvalidState">
+            <summary>The operation cannot be performed in the current state.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.NotSupported">
+            <summary>The requested operation is not supported by this implementation.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.Cancelled">
+            <summary>The operation was cancelled before completion.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.Timeout">
+            <summary>The operation exceeded its time limit.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.Internal">
+            <summary>An unexpected internal error occurred.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.Unauthorized">
+            <summary>The caller is not authenticated.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.Forbidden">
+            <summary>The caller is authenticated but does not have permission for this operation.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ValidationFailed">
+            <summary>One or more validation rules failed.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.RequiredMissing">
+            <summary>A required field is missing or null.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.InvalidFormat">
+            <summary>A field value does not match the expected format.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.OutOfRange">
+            <summary>A numeric value is outside the acceptable range.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ConfigNotFound">
+            <summary>A required configuration file was not found on disk.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ConfigInvalid">
+            <summary>A configuration file exists but contains invalid data.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ConfigLoadFailed">
+            <summary>Failed to read or deserialize a configuration file.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.FileNotFound">
+            <summary>A required file was not found on disk.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.FileReadFailed">
+            <summary>Failed to read a file from disk.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.FileWriteFailed">
+            <summary>Failed to write a file to disk.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ConnectionFailed">
+            <summary>Could not establish a connection to a remote endpoint.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ConnectionLost">
+            <summary>An established connection was lost unexpectedly.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.ConnectionTimeout">
+            <summary>A connection attempt timed out.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.NotInitialized">
+            <summary>An operation was attempted before <c>InitializeAsync()</c> was called.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.AlreadyStarted">
+            <summary>The framework or a component has already been started.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.LibraryNotFound">
+            <summary>A required library was not found in the LibraryManager.</summary>
+        </member>
+        <member name="F:CodeLogic.Core.Results.ErrorCode.PluginNotFound">
+            <summary>A required plugin was not found in the PluginManager.</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.ParsedCliArgs">
+            <summary>
+            The parsed result of command-line argument processing.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.CliArgParser">
+            <summary>
+            Parses command-line arguments into a <see cref="T:CodeLogic.Core.Utilities.ParsedCliArgs"/> instance.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Utilities.CliArgParser.Parse">
+            <summary>
+            Parses Environment.GetCommandLineArgs() (skips argv[0] which is the exe path).
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Utilities.CliArgParser.Parse(System.String[])">
+            <summary>Parses an explicit args array (useful for testing).</summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.FirstRunManager">
+            <summary>
+            Manages first-run detection and directory/config scaffolding.
+            Does NOT exit after first run — scaffolds and returns, caller decides what to do.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Utilities.FirstRunManager.ScaffoldAsync(System.String,System.String)">
+            <summary>
+            Performs first-run scaffolding:
+            - Creates required directory structure
+            - Generates CodeLogic.json with debug-aware defaults
+            - Creates .codelogic marker
+            Returns how many directories were created.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.FirstRunResult">
+            <summary>
+            Represents the result of a first-run scaffolding operation.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.SemanticVersion">
+            <summary>
+            Represents a semantic version in the form major.minor.patch.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Utilities.SemanticVersion.Parse(System.String)">
+            <summary>
+            Parses a semantic version string in the form "major.minor.patch".
+            Throws <see cref="T:System.FormatException"/> on invalid input.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Core.Utilities.SemanticVersion.TryParse(System.String,CodeLogic.Core.Utilities.SemanticVersion@)">
+            <summary>
+            Attempts to parse a semantic version string. Returns false on invalid input.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.StartupValidator">
+            <summary>
+            Validates the runtime environment and directory structure before the framework starts.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Core.Utilities.ValidationResult">
+            <summary>
+            Represents the result of a startup validation run.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.ApplicationContext">
+            <summary>
+            Context provided to the consuming application during its lifecycle phases.
+            Mirrors <see cref="T:CodeLogic.Framework.Libraries.LibraryContext"/> but scoped to the Application directory.
+            The same instance is passed through all lifecycle phases — store it for use during OnStopAsync.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.ApplicationId">
+            <summary>
+            The application's unique ID. Matches <see cref="P:CodeLogic.Framework.Application.ApplicationManifest.Id"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.ApplicationDirectory">
+            <summary>
+            Absolute path to the application root directory.
+            Defaults to <c>{FrameworkRoot}/Application/</c>, or <see cref="P:CodeLogic.CodeLogicOptions.ApplicationRootPath"/> if set.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.ConfigDirectory">
+            <summary>
+            Absolute path to the application config directory.
+            Config files (<c>config.json</c>, <c>config.database.json</c>, etc.) are stored here.
+            Same as <see cref="P:CodeLogic.Framework.Application.ApplicationContext.ApplicationDirectory"/> by default.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.LocalizationDirectory">
+            <summary>
+            Absolute path to the application localization directory.
+            Per-culture JSON files (e.g., <c>strings.en-US.json</c>) are stored here.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.LogsDirectory">
+            <summary>
+            Absolute path to the application logs directory.
+            The scoped <see cref="P:CodeLogic.Framework.Application.ApplicationContext.Logger"/> writes here, tagged "APPLICATION".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.DataDirectory">
+            <summary>
+            Absolute path to the application data directory.
+            Use this for persistent application-owned files (databases, exports, etc.).
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.Logger">
+            <summary>
+            A scoped logger configured for this application. Log entries are written to
+            <see cref="P:CodeLogic.Framework.Application.ApplicationContext.LogsDirectory"/> and tagged "APPLICATION".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.Configuration">
+            <summary>
+            Configuration manager scoped to this application's <see cref="P:CodeLogic.Framework.Application.ApplicationContext.ConfigDirectory"/>.
+            Use this to register, load, save, and reload config models.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.Localization">
+            <summary>
+            Localization manager scoped to this application's <see cref="P:CodeLogic.Framework.Application.ApplicationContext.LocalizationDirectory"/>.
+            Use this to register and retrieve localized string models.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationContext.Events">
+            <summary>
+            The shared framework event bus. All libraries, the application, and plugins share this instance.
+            Subscribe to library events or publish application events here.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.ApplicationManifest">
+            <summary>
+            Describes an application's identity. Returned by <see cref="P:CodeLogic.Framework.Application.IApplication.Manifest"/>.
+            Used in logs, health reports, and the <c>--info</c> CLI output.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationManifest.Id">
+            <summary>
+            Unique identifier for this application (e.g., "homepoint", "myapp").
+            Used internally to scope logs and context objects.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationManifest.Name">
+            <summary>
+            Human-readable display name (e.g., "HomePoint").
+            Shown in console output, health reports, and logs.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationManifest.Version">
+            <summary>
+            Semantic version string (e.g., "1.0.0").
+            Shown in the <c>--version</c> output and health reports.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationManifest.Description">
+            <summary>
+            Optional description of the application's purpose.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.ApplicationManifest.Author">
+            <summary>
+            Optional author or team name.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.IApplication">
+            <summary>
+            Interface for the consuming application to participate in the CodeLogic lifecycle.
+            Register via <see cref="M:CodeLogic.CodeLogic.RegisterApplication(CodeLogic.Framework.Application.IApplication)"/> before <c>ConfigureAsync()</c>.
+            <para>
+            The application follows the same 4-phase lifecycle as libraries, but with important timing:
+            <list type="bullet">
+              <item><description><see cref="M:CodeLogic.Framework.Application.IApplication.OnConfigureAsync(CodeLogic.Framework.Application.ApplicationContext)"/> is called during <c>ConfigureAsync()</c>, before libraries start.</description></item>
+              <item><description><see cref="M:CodeLogic.Framework.Application.IApplication.OnInitializeAsync(CodeLogic.Framework.Application.ApplicationContext)"/> and <see cref="M:CodeLogic.Framework.Application.IApplication.OnStartAsync(CodeLogic.Framework.Application.ApplicationContext)"/> are called during <c>StartAsync()</c>, AFTER all libraries are running.</description></item>
+              <item><description><see cref="M:CodeLogic.Framework.Application.IApplication.OnStopAsync"/> is called during <c>StopAsync()</c>, BEFORE libraries are stopped.</description></item>
+            </list>
+            This ordering guarantees that library services are available when the application starts,
+            and the application is fully stopped before its dependencies are torn down.
+            </para>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.IApplication.Manifest">
+            <summary>
+            Application metadata: ID, name, version, description, and author.
+            Used for display in logs and health reports.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.IApplication.OnConfigureAsync(CodeLogic.Framework.Application.ApplicationContext)">
+            <summary>
+            Phase 1 — Configuration. Called during <c>ConfigureAsync()</c>, before libraries start.
+            Register config and localization models with the context managers.
+            The framework generates missing config files and loads all registered configs
+            immediately after this method returns. Do NOT read config values here.
+            </summary>
+            <param name="context">The application context providing scoped services and paths.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.IApplication.OnInitializeAsync(CodeLogic.Framework.Application.ApplicationContext)">
+            <summary>
+            Phase 2 — Initialization. Called during <c>StartAsync()</c>, after all libraries are running.
+            At this point, all library services are available. Set up application services,
+            resolve dependencies from libraries, and prepare for operation.
+            Throw an exception to abort startup.
+            </summary>
+            <param name="context">The application context with loaded config and localization.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.IApplication.OnStartAsync(CodeLogic.Framework.Application.ApplicationContext)">
+            <summary>
+            Phase 3 — Start. Called during <c>StartAsync()</c>, immediately after <see cref="M:CodeLogic.Framework.Application.IApplication.OnInitializeAsync(CodeLogic.Framework.Application.ApplicationContext)"/>.
+            Start background services, subscribe to events, open connections, begin processing.
+            </summary>
+            <param name="context">The application context (same instance as Initialize).</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.IApplication.OnStopAsync">
+            <summary>
+            Phase 4 — Stop. Called during <c>StopAsync()</c> BEFORE libraries are stopped.
+            Flush pending work, stop background tasks, close connections, and release resources.
+            After this returns, the framework will stop all libraries.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.IApplication.HealthCheckAsync">
+            <summary>
+            Returns the current health of the application.
+            Called by the framework during scheduled health checks and the <c>--health</c> CLI flag.
+            The default implementation always returns Healthy — override to add real checks.
+            </summary>
+            <returns>A <see cref="T:CodeLogic.Framework.Libraries.HealthStatus"/> reflecting the application's current operational state.</returns>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.Plugins.IPlugin">
+            <summary>
+            Interface for hot-loadable CodeLogic plugins.
+            Plugins are app-managed: the consuming application decides what to load via <see cref="T:CodeLogic.Framework.Application.Plugins.PluginManager"/>.
+            Plugins follow the same 4-phase lifecycle as libraries but are loaded into isolated
+            <see cref="T:CodeLogic.Framework.Application.Plugins.PluginLoadContext"/> instances, enabling true hot-reload without restarting the host.
+            <para>
+            Plugin assemblies are discovered from <c>{FrameworkRoot}/Plugins/*.Plugin/*.Plugin.dll</c>.
+            </para>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.IPlugin.Manifest">
+            <summary>
+            Plugin metadata: ID, name, version, description, author, and minimum framework version.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.IPlugin.State">
+            <summary>
+            Current lifecycle state of this plugin instance.
+            Transitions from <see cref="F:CodeLogic.Framework.Application.Plugins.PluginState.Discovered"/> through to <see cref="F:CodeLogic.Framework.Application.Plugins.PluginState.Started"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnConfigureAsync(CodeLogic.Framework.Application.Plugins.PluginContext)">
+            <summary>
+            Phase 1 — Configuration. Called first when the plugin is loaded.
+            Register config and localization models with the context managers.
+            The framework generates missing config files and loads all registered configs
+            immediately after this method returns. Do NOT read config values here.
+            </summary>
+            <param name="context">The plugin context providing scoped services and paths.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnInitializeAsync(CodeLogic.Framework.Application.Plugins.PluginContext)">
+            <summary>
+            Phase 2 — Initialization. Called after configs and localization are loaded.
+            Set up plugin services, validate configuration, and prepare resources.
+            Throw an exception here to abort loading — the plugin will transition to <see cref="F:CodeLogic.Framework.Application.Plugins.PluginState.Failed"/>.
+            </summary>
+            <param name="context">The plugin context with loaded config and localization.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnStartAsync(CodeLogic.Framework.Application.Plugins.PluginContext)">
+            <summary>
+            Phase 3 — Start. Called after initialization completes.
+            Start background services, subscribe to events, and begin processing.
+            After this returns, the plugin is considered fully operational.
+            A <see cref="T:CodeLogic.Core.Events.PluginLoadedEvent"/> is published on the event bus.
+            </summary>
+            <param name="context">The plugin context (same instance as Initialize).</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnUnloadAsync">
+            <summary>
+            Phase 4 — Unload. Called when the plugin is being unloaded (shutdown, hot-reload, or manual unload).
+            Stop background tasks, close connections, flush buffers, and release resources.
+            After this returns, the plugin's assembly will be unloaded from memory.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.Plugins.IPlugin.HealthCheckAsync">
+            <summary>
+            Returns the current health status of this plugin.
+            Called during scheduled health checks and the <c>--health</c> CLI flag.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.Plugins.PluginContext">
+            <summary>
+            Context provided to plugins at every lifecycle phase.
+            Full parity with <see cref="T:CodeLogic.Framework.Libraries.LibraryContext"/> — includes Config, Localization, Events, and Logger.
+            All paths and services are scoped to this specific plugin's directory.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.PluginId">
+            <summary>
+            The plugin's unique ID. Matches <see cref="P:CodeLogic.Framework.Application.Plugins.PluginManifest.Id"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.PluginDirectory">
+            <summary>
+            Absolute path to this plugin's directory (the <c>*.Plugin/</c> folder under <c>Plugins/</c>).
+            Example: <c>CodeLogic/Plugins/MyApp.Plugin/</c>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.ConfigDirectory">
+            <summary>
+            Absolute path to this plugin's config directory.
+            Config files (<c>config.json</c>, etc.) are stored here.
+            Same as <see cref="P:CodeLogic.Framework.Application.Plugins.PluginContext.PluginDirectory"/> by default.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.LocalizationDirectory">
+            <summary>
+            Absolute path to this plugin's localization directory.
+            Per-culture JSON files (e.g., <c>strings.en-US.json</c>) are stored here.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.LogsDirectory">
+            <summary>
+            Absolute path to this plugin's logs directory.
+            The scoped <see cref="P:CodeLogic.Framework.Application.Plugins.PluginContext.Logger"/> writes here.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.DataDirectory">
+            <summary>
+            Absolute path to this plugin's data directory.
+            Use this for persistent plugin-owned files.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.Logger">
+            <summary>
+            A scoped logger configured for this plugin. Log entries are written to
+            <see cref="P:CodeLogic.Framework.Application.Plugins.PluginContext.LogsDirectory"/> and tagged with the plugin ID.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.Configuration">
+            <summary>
+            Configuration manager scoped to this plugin's <see cref="P:CodeLogic.Framework.Application.Plugins.PluginContext.ConfigDirectory"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.Localization">
+            <summary>
+            Localization manager scoped to this plugin's <see cref="P:CodeLogic.Framework.Application.Plugins.PluginContext.LocalizationDirectory"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginContext.Events">
+            <summary>
+            The shared framework event bus. Plugins share the same event bus as libraries and the application.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.Plugins.PluginLoadContext">
+            <summary>
+            Isolated AssemblyLoadContext for each plugin.
+            Allows true hot-unload by releasing the assembly from memory.
+            isCollectible=true enables GC collection after Unload().
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Application.Plugins.PluginManager.RegisterInProcessPluginAsync(CodeLogic.Framework.Application.Plugins.IPlugin,CodeLogic.Framework.Application.Plugins.PluginContext)">
+            <summary>
+            Registers an in-process plugin (already instantiated and running) with the PluginManager
+            so that it participates in health checks, <see cref="M:CodeLogic.Framework.Application.Plugins.PluginManager.GetLoadedPlugins"/>, and graceful
+            shutdown via <see cref="M:CodeLogic.Framework.Application.Plugins.PluginManager.UnloadAllAsync"/>.
+            <para>
+            Use this when hosting a plugin in the same process/assembly (e.g. demos, tests) rather
+            than loading it from a separate DLL via <see cref="M:CodeLogic.Framework.Application.Plugins.PluginManager.LoadPluginAsync(System.String)"/>. The caller is
+            responsible for running the full 4-phase lifecycle before calling this method.
+            </para>
+            </summary>
+            <param name="plugin">The already-started plugin instance to register.</param>
+            <param name="context">The <see cref="T:CodeLogic.Framework.Application.Plugins.PluginContext"/> the plugin was started with.</param>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.Plugins.PluginManifest">
+            <summary>
+            Describes a plugin's identity and framework requirements.
+            Returned by <see cref="P:CodeLogic.Framework.Application.Plugins.IPlugin.Manifest"/> and used by <see cref="T:CodeLogic.Framework.Application.Plugins.PluginManager"/>
+            for tracking, display, and version compatibility checks.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginManifest.Id">
+            <summary>
+            Unique identifier for this plugin (e.g., "myapp.dashboard", "homepoint.z-wave").
+            Used as the key in the PluginManager's internal registry.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginManifest.Name">
+            <summary>
+            Human-readable display name (e.g., "Dashboard Plugin").
+            Shown in console output and health reports.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginManifest.Version">
+            <summary>
+            Semantic version string (e.g., "1.0.0").
+            Shown in console output when the plugin is loaded.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginManifest.Description">
+            <summary>
+            Optional description of what this plugin provides.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginManifest.Author">
+            <summary>
+            Optional author or team name.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginManifest.MinFrameworkVersion">
+            <summary>
+            Minimum CodeLogic framework version required to run this plugin (e.g., "3.0.0").
+            When set, the PluginManager may validate this against the running framework version.
+            Currently informational — enforcement is the plugin author's responsibility.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginOptions.PluginsDirectory">
+            <summary>Base directory where plugin folders live. Default: {FrameworkRoot}/Plugins</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginOptions.EnableHotReload">
+            <summary>Enable auto-reload when plugin DLL changes on disk.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginOptions.WatchForChanges">
+            <summary>Enable filesystem watching for DLL changes.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Application.Plugins.PluginOptions.ReloadDebounce">
+            <summary>Debounce interval to avoid double-reloads on rapid file changes.</summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Application.Plugins.PluginState">
+            <summary>
+            Tracks the lifecycle state of a loaded plugin.
+            Mirrors <see cref="T:CodeLogic.Framework.Libraries.LibraryState"/> but with an additional <see cref="F:CodeLogic.Framework.Application.Plugins.PluginState.Discovered"/> state
+            for plugins found on disk but not yet loaded into memory.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Discovered">
+            <summary>Found on disk (by <see cref="M:CodeLogic.Framework.Application.Plugins.PluginManager.DiscoverAsync"/>) but not yet loaded into memory.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Loaded">
+            <summary>Assembly loaded into an isolated <c>PluginLoadContext</c> and the plugin instance created.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Configured">
+            <summary><see cref="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnConfigureAsync(CodeLogic.Framework.Application.Plugins.PluginContext)"/> completed and config/localization files were loaded.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Initialized">
+            <summary><see cref="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnInitializeAsync(CodeLogic.Framework.Application.Plugins.PluginContext)"/> completed successfully.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Started">
+            <summary><see cref="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnStartAsync(CodeLogic.Framework.Application.Plugins.PluginContext)"/> completed — the plugin is fully operational.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Stopped">
+            <summary><see cref="M:CodeLogic.Framework.Application.Plugins.IPlugin.OnUnloadAsync"/> completed — the plugin has been unloaded cleanly.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Application.Plugins.PluginState.Failed">
+            <summary>An exception occurred during any lifecycle phase. The plugin is not operational.</summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.HealthStatusLevel">
+            <summary>
+            The three possible health levels for a component.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Healthy">
+            <summary>The component is fully operational.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Degraded">
+            <summary>The component is running but with reduced capability (e.g., high latency, partial failure).</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Unhealthy">
+            <summary>The component is not functioning and requires immediate attention.</summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.HealthStatus">
+            <summary>
+            Describes the health status of a single library, plugin, or application.
+            Returned by <see cref="M:CodeLogic.Framework.Libraries.ILibrary.HealthCheckAsync"/>, <c>IPlugin.HealthCheckAsync</c>,
+            and <c>IApplication.HealthCheckAsync</c>.
+            Use the static factory methods to construct instances.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.Status">
+            <summary>The health level: Healthy, Degraded, or Unhealthy.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.Message">
+            <summary>A human-readable message describing the health state.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.Data">
+            <summary>
+            Optional structured data providing additional context (e.g., queue depth, connection count, latency).
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.CheckedAt">
+            <summary>The UTC timestamp when this health check was performed.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.IsHealthy">
+            <summary>Returns true when <see cref="P:CodeLogic.Framework.Libraries.HealthStatus.Status"/> is <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Healthy"/>.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.IsDegraded">
+            <summary>Returns true when <see cref="P:CodeLogic.Framework.Libraries.HealthStatus.Status"/> is <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Degraded"/>.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.HealthStatus.IsUnhealthy">
+            <summary>Returns true when <see cref="P:CodeLogic.Framework.Libraries.HealthStatus.Status"/> is <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Unhealthy"/>.</summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.HealthStatus.Healthy(System.String)">
+            <summary>
+            Creates a <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Healthy"/> status with an optional message.
+            </summary>
+            <param name="message">A description of the healthy state. Default: "Healthy".</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.HealthStatus.Degraded(System.String)">
+            <summary>
+            Creates a <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Degraded"/> status.
+            Use when the component is running but with reduced capability.
+            </summary>
+            <param name="message">A description of the degradation (e.g., "High queue depth: 5000").</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.HealthStatus.Unhealthy(System.String)">
+            <summary>
+            Creates a <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Unhealthy"/> status.
+            Use when the component is not functioning.
+            </summary>
+            <param name="message">A description of the failure (e.g., "Cannot connect to database").</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.HealthStatus.FromException(System.Exception)">
+            <summary>
+            Creates an <see cref="F:CodeLogic.Framework.Libraries.HealthStatusLevel.Unhealthy"/> status from an exception.
+            The exception message becomes the status message.
+            </summary>
+            <param name="ex">The exception that caused the unhealthy state.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.HealthStatus.ToString">
+            <summary>Returns a string in the format "Status: Message".</summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.ILibrary">
+            <summary>
+            Interface for a CodeLogic library — a self-contained, reusable service component.
+            Libraries participate in a strict 4-phase lifecycle managed by <see cref="T:CodeLogic.Framework.Libraries.LibraryManager"/>.
+            Libraries are started in dependency order and stopped in reverse order.
+            <para>
+            Lifecycle phases (in order):
+            <list type="number">
+              <item><description><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> — Register configs and localization models.</description></item>
+              <item><description><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> — Set up services using loaded config.</description></item>
+              <item><description><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> — Start background tasks, open connections.</description></item>
+              <item><description><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnStopAsync"/> — Gracefully stop and release resources.</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.ILibrary.Manifest">
+            <summary>
+            Metadata describing this library: ID, name, version, dependencies, etc.
+            Used by the LibraryManager for discovery, dependency resolution, and display.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.ILibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <summary>
+            Phase 1 — Configuration. Called first, before any other phase.
+            Register config and localization models with the context managers.
+            The framework generates missing config files and loads all registered configs
+            immediately after this method returns.
+            Do NOT access config values here — they are not loaded yet.
+            </summary>
+            <param name="context">The library context providing scoped services and paths.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.ILibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <summary>
+            Phase 2 — Initialization. Called after all configs and localizations are loaded.
+            Set up services, validate configuration, establish connections, and prepare resources.
+            Throw an exception here to abort startup — the library will transition to <see cref="F:CodeLogic.Framework.Libraries.LibraryState.Failed"/>.
+            </summary>
+            <param name="context">The library context with loaded config and localization.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.ILibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <summary>
+            Phase 3 — Start. Called after all libraries have been initialized.
+            Start background services, open long-lived connections, begin processing.
+            After this method returns, the library is considered fully operational.
+            A <see cref="T:CodeLogic.Core.Events.LibraryStartedEvent"/> is published on the event bus.
+            </summary>
+            <param name="context">The library context (same instance as Initialize).</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.ILibrary.OnStopAsync">
+            <summary>
+            Phase 4 — Stop. Called in reverse start order during graceful shutdown.
+            Stop background tasks, close connections, flush buffers, release resources.
+            Exceptions here are logged but do not prevent other libraries from stopping.
+            A <see cref="T:CodeLogic.Core.Events.LibraryStoppedEvent"/> is published on the event bus.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.ILibrary.HealthCheckAsync">
+            <summary>
+            Returns the current health status of this library.
+            Called on a timer (see <see cref="P:CodeLogic.HealthChecksConfig.IntervalSeconds"/>) and on demand
+            via the <c>--health</c> CLI flag or <see cref="M:CodeLogic.ICodeLogicRuntime.GetHealthAsync"/>.
+            Implement this to report database connectivity, queue depth, or any other meaningful status.
+            </summary>
+            <returns>
+            A <see cref="T:CodeLogic.Framework.Libraries.HealthStatus"/> indicating Healthy, Degraded, or Unhealthy.
+            </returns>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LibraryContext">
+            <summary>
+            Context provided to each library at every lifecycle phase.
+            All paths and services are scoped to this specific library.
+            The same instance is passed to <see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> and
+            <see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> — store it if you need it during OnStopAsync.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.LibraryId">
+            <summary>
+            The library's unique ID (e.g., "CL.SQLite"). Matches <see cref="P:CodeLogic.Framework.Libraries.LibraryManifest.Id"/>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.LibraryDirectory">
+            <summary>
+            Absolute path to this library's root directory under <c>Libraries/</c>.
+            Example: <c>CodeLogic/Libraries/CL.SQLite/</c>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.ConfigDirectory">
+            <summary>
+            Absolute path to this library's config directory.
+            Config files (<c>config.json</c>, <c>config.db.json</c>, etc.) are stored here.
+            Same as <see cref="P:CodeLogic.Framework.Libraries.LibraryContext.LibraryDirectory"/> by default.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.LocalizationDirectory">
+            <summary>
+            Absolute path to this library's localization directory.
+            Per-culture JSON files (e.g., <c>strings.en-US.json</c>) are stored here.
+            Example: <c>CodeLogic/Libraries/CL.SQLite/localization/</c>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.LogsDirectory">
+            <summary>
+            Absolute path to this library's logs directory.
+            The scoped <see cref="P:CodeLogic.Framework.Libraries.LibraryContext.Logger"/> writes here.
+            Example: <c>CodeLogic/Libraries/CL.SQLite/logs/</c>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.DataDirectory">
+            <summary>
+            Absolute path to this library's data directory.
+            Use this for persistent library-owned files (databases, caches, exports, etc.).
+            Example: <c>CodeLogic/Libraries/CL.SQLite/data/</c>
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.Logger">
+            <summary>
+            A scoped logger configured for this library. Log entries are written to
+            <see cref="P:CodeLogic.Framework.Libraries.LibraryContext.LogsDirectory"/> and tagged with the library ID.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.Configuration">
+            <summary>
+            Configuration manager scoped to this library's <see cref="P:CodeLogic.Framework.Libraries.LibraryContext.ConfigDirectory"/>.
+            Use this to register, load, save, and reload config models.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.Localization">
+            <summary>
+            Localization manager scoped to this library's <see cref="P:CodeLogic.Framework.Libraries.LibraryContext.LocalizationDirectory"/>.
+            Use this to register and retrieve localized string models.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryContext.Events">
+            <summary>
+            The shared framework event bus. All libraries and the application share the same instance.
+            Use this to publish and subscribe to events.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LibraryManager">
+            <summary>
+            Manages the full lifecycle of all registered CL.* libraries.
+            Thread-safe: lifecycle methods are serialized via SemaphoreSlim.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryManager.LoadLibraryAsync``1">
+            <summary>
+            Manually registers a library by type.
+            Dependency validation is deferred to ConfigureAllAsync which runs
+            ValidateDependencies after all libraries are registered.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryManager.ForceRegenerateAllConfigsAsync(System.String[])">
+            <summary>
+            Force-regenerates config defaults for all configured libraries, overwriting existing files.
+            Only runs for libraries that have already completed their Configure phase (Context is set).
+            Pass an empty array to include all libraries; pass specific IDs to scope generation.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LibraryManifest">
+            <summary>
+            Describes a library's identity and requirements.
+            Returned by <see cref="P:CodeLogic.Framework.Libraries.ILibrary.Manifest"/> and used by <see cref="T:CodeLogic.Framework.Libraries.LibraryManager"/>
+            for discovery, dependency resolution, and display.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Id">
+            <summary>
+            Unique identifier for this library. By convention, prefixed with <c>CL.</c>
+            (e.g., <c>"CL.SQLite"</c>, <c>"CL.Mail"</c>).
+            The ID determines the library's directory name under <c>Libraries/</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Name">
+            <summary>
+            Human-readable display name (e.g., "SQLite Library").
+            Shown in console output, health reports, and logs.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Version">
+            <summary>
+            Semantic version string (e.g., "1.0.0").
+            Checked during dependency validation when a <see cref="P:CodeLogic.Framework.Libraries.LibraryDependency.MinVersion"/> is specified.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Description">
+            <summary>
+            Optional description of what this library provides. Shown in <c>--info</c> output.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Author">
+            <summary>
+            Optional author or team name.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Dependencies">
+            <summary>
+            Other libraries this library depends on. Used for topological sort during startup.
+            Required dependencies that are missing will prevent startup.
+            Optional dependencies that are missing are silently skipped.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryManifest.Tags">
+            <summary>
+            Optional tags for categorization and filtering. Not used by the framework at runtime.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LibraryDependency">
+            <summary>
+            Declares a dependency on another library within a <see cref="T:CodeLogic.Framework.Libraries.LibraryManifest"/>.
+            Use the factory methods (<see cref="M:CodeLogic.Framework.Libraries.LibraryDependency.Required(System.String)"/>, <see cref="M:CodeLogic.Framework.Libraries.LibraryDependency.Optional(System.String)"/>)
+            rather than constructing directly.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryDependency.Id">
+            <summary>
+            The ID of the required library (e.g., <c>"CL.SQLite"</c>).
+            Must match the <see cref="P:CodeLogic.Framework.Libraries.LibraryManifest.Id"/> of the depended-upon library exactly.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryDependency.MinVersion">
+            <summary>
+            Minimum acceptable version of the dependency (e.g., <c>"1.2.0"</c>).
+            When set, the framework validates that the loaded library meets this requirement.
+            When null, any version is accepted.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryDependency.IsOptional">
+            <summary>
+            When true, a missing dependency does not block startup.
+            When false (default), a missing dependency throws during dependency validation.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryDependency.Required(System.String)">
+            <summary>Creates a required dependency with no minimum version constraint.</summary>
+            <param name="id">The library ID this library depends on.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryDependency.Required(System.String,System.String)">
+            <summary>Creates a required dependency with a minimum version constraint.</summary>
+            <param name="id">The library ID this library depends on.</param>
+            <param name="minVersion">The minimum acceptable version (e.g., "1.2.0").</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryDependency.Optional(System.String)">
+            <summary>Creates an optional dependency — startup continues even if the library is absent.</summary>
+            <param name="id">The library ID this library optionally depends on.</param>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryDependency.Optional(System.String,System.String)">
+            <summary>Creates an optional dependency with a minimum version constraint.</summary>
+            <param name="id">The library ID this library optionally depends on.</param>
+            <param name="minVersion">The minimum acceptable version if the library is present.</param>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LibraryDependencyAttribute">
+            <summary>
+            Applied to library classes to declare dependencies on other libraries.
+            Equivalent to adding entries to <see cref="P:CodeLogic.Framework.Libraries.LibraryManifest.Dependencies"/>.
+            Can be applied multiple times for multiple dependencies.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryDependencyAttribute.Id">
+            <summary>The ID of the library this library depends on (e.g., "CL.SQLite").</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryDependencyAttribute.MinVersion">
+            <summary>Minimum required version, or null for any version.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LibraryDependencyAttribute.IsOptional">
+            <summary>When true, startup continues even if this dependency is not loaded.</summary>
+        </member>
+        <member name="M:CodeLogic.Framework.Libraries.LibraryDependencyAttribute.ToDependency">
+            <summary>Converts this attribute to a <see cref="T:CodeLogic.Framework.Libraries.LibraryDependency"/> record.</summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LibraryState">
+            <summary>
+            Tracks the lifecycle state of a loaded library.
+            States advance sequentially through the normal lifecycle.
+            <see cref="F:CodeLogic.Framework.Libraries.LibraryState.Failed"/> can be set from any phase when an exception occurs.
+            </summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.LibraryState.Loaded">
+            <summary>Added to <see cref="T:CodeLogic.Framework.Libraries.LibraryManager"/> but <see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> has not run yet.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.LibraryState.Configured">
+            <summary><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> completed and config/localization files were loaded.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.LibraryState.Initialized">
+            <summary><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> completed successfully.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.LibraryState.Started">
+            <summary><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)"/> completed — the library is fully operational.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.LibraryState.Stopped">
+            <summary><see cref="M:CodeLogic.Framework.Libraries.ILibrary.OnStopAsync"/> completed — the library has shut down cleanly.</summary>
+        </member>
+        <member name="F:CodeLogic.Framework.Libraries.LibraryState.Failed">
+            <summary>An exception occurred during any lifecycle phase. The library is not operational.</summary>
+        </member>
+        <member name="T:CodeLogic.Framework.Libraries.LoadedLibrary">
+            <summary>
+            Internal record of a library registered with LibraryManager.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LoadedLibrary.Context">
+            <summary>Context assigned after OnConfigureAsync completes.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LoadedLibrary.State">
+            <summary>Current lifecycle state.</summary>
+        </member>
+        <member name="P:CodeLogic.Framework.Libraries.LoadedLibrary.FailureException">
+            <summary>Exception if State == Failed.</summary>
+        </member>
+        <member name="T:CodeLogic.Libraries">
+            <summary>
+            Static accessor for loaded libraries.
+            Provides a convenient shorthand over <see cref="M:CodeLogic.CodeLogic.GetLibraryManager"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.Libraries.Get``1">
+            <summary>
+            Retrieves a loaded library by its concrete type.
+            Returns null if no library of type <typeparamref name="T"/> is loaded.
+            </summary>
+            <typeparam name="T">The library type, which must implement <see cref="T:CodeLogic.Framework.Libraries.ILibrary"/>.</typeparam>
+            <returns>The library instance, or null if not loaded.</returns>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown if <see cref="M:CodeLogic.CodeLogic.ConfigureAsync"/> has not been called yet.
+            </exception>
+        </member>
+        <member name="M:CodeLogic.Libraries.LoadAsync``1">
+            <summary>
+            Dynamically loads a library by type and registers it with the LibraryManager.
+            Call this between <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> and <see cref="M:CodeLogic.CodeLogic.ConfigureAsync"/>
+            to register libraries before the configure/start sequence runs.
+            </summary>
+            <typeparam name="T">
+            The library type. Must implement <see cref="T:CodeLogic.Framework.Libraries.ILibrary"/> and have a public parameterless constructor.
+            </typeparam>
+            <returns>True if the library was loaded successfully; false if it was already registered.</returns>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown if <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> has not been called yet.
+            </exception>
+        </member>
+        <member name="M:CodeLogic.Libraries.Get(System.String)">
+            <summary>
+            Retrieves a loaded library by its string ID (e.g., <c>"CL.SQLite"</c>).
+            Returns null if no library with that ID is loaded.
+            </summary>
+            <param name="libraryId">The library ID as declared in its <see cref="P:CodeLogic.Framework.Libraries.LibraryManifest.Id"/>.</param>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown if <see cref="M:CodeLogic.CodeLogic.ConfigureAsync"/> has not been called yet.
+            </exception>
+        </member>
+        <member name="M:CodeLogic.Libraries.GetAll">
+            <summary>
+            Returns all currently loaded libraries.
+            Safe to call before <see cref="M:CodeLogic.CodeLogic.ConfigureAsync"/> — returns an empty sequence rather than throwing.
+            Useful for diagnostics or iterating all libraries without knowing their types.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.CodeLogicConfiguration">
+            <summary>
+            Strongly-typed representation of <c>CodeLogic.json</c> (or <c>CodeLogic.Development.json</c>).
+            Deserialized by the runtime during <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            Do not instantiate directly — the runtime owns this object.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicConfiguration.Framework">
+            <summary>Framework identity information (name and version).</summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicConfiguration.Logging">
+            <summary>Logging behavior: file mode, levels, console output, and format.</summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicConfiguration.Localization">
+            <summary>Localization settings: default culture, supported cultures, and template generation.</summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicConfiguration.Libraries">
+            <summary>Library discovery settings: naming pattern and dependency resolution.</summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicConfiguration.HealthChecks">
+            <summary>Scheduled health check settings: enabled flag and interval.</summary>
+        </member>
+        <member name="T:CodeLogic.FrameworkConfig">
+            <summary>
+            Framework identity block within <see cref="T:CodeLogic.CodeLogicConfiguration"/>.
+            Informational only — not used at runtime for any behavior decisions.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.FrameworkConfig.Name">
+            <summary>Display name for the framework. Default: "CodeLogic".</summary>
+        </member>
+        <member name="P:CodeLogic.FrameworkConfig.Version">
+            <summary>Framework version string. Default: "3.0.0".</summary>
+        </member>
+        <member name="T:CodeLogic.LoggingConfig">
+            <summary>
+            Controls log file behavior, log levels, console output, and format.
+            Maps to the <c>"logging"</c> section in CodeLogic.json.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.Mode">
+            <summary>
+            Log file mode: <c>"singleFile"</c> (default, rolling by size) or
+            <c>"dateFolder"</c> (files sorted into year/month/day directories).
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.MaxFileSizeMb">
+            <summary>
+            Maximum size of a single log file in megabytes before it rolls over.
+            Applies only in <c>singleFile</c> mode. Default: 10.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.MaxRolledFiles">
+            <summary>
+            Maximum number of rolled (archived) log files to keep.
+            Oldest files are deleted when the limit is exceeded. Default: 5.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.FileNamePattern">
+            <summary>
+            File name pattern used in <c>dateFolder</c> mode.
+            Supports <c>{date:format}</c> and <c>{level}</c> tokens.
+            Default: <c>"{date:yyyy}/{date:MM}/{date:dd}/{level}.log"</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.GlobalLevel">
+            <summary>
+            Minimum log level written to disk. Values: Trace, Debug, Info, Warning, Error, Critical.
+            Log entries below this level are discarded. Default: "Warning".
+            Override to "Debug" in CodeLogic.Development.json for development.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.EnableConsoleOutput">
+            <summary>
+            When true, logs are also written to the console (stdout).
+            Default: false. Set to true in CodeLogic.Development.json for development.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.ConsoleMinimumLevel">
+            <summary>
+            Minimum log level written to the console when <see cref="P:CodeLogic.LoggingConfig.EnableConsoleOutput"/> is true.
+            Default: "Debug".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.EnableDebugMode">
+            <summary>
+            When true, enables verbose debug logging mode for detailed diagnostic output.
+            Default: false.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.CentralizedDebugLog">
+            <summary>
+            When true, all library loggers write to a shared central debug log file
+            in addition to their own log files. Useful for correlating events across components.
+            Default: false.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.CentralizedLogsPath">
+            <summary>
+            Override path for the centralized debug log file. When null, defaults to
+            <c>{FrameworkRoot}/Framework/logs/debug.log</c>.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.IncludeMachineName">
+            <summary>
+            When true, the machine name is prepended to each log entry.
+            Useful when log files are aggregated from multiple machines. Default: true.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LoggingConfig.TimestampFormat">
+            <summary>
+            Timestamp format string used for each log entry. Default: <c>"yyyy-MM-dd HH:mm:ss.fff"</c>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.LoggingConfig.GetGlobalLogLevel">
+            <summary>
+            Parses <see cref="P:CodeLogic.LoggingConfig.GlobalLevel"/> to a <see cref="T:CodeLogic.Core.Logging.LogLevel"/> enum value.
+            Falls back to <see cref="F:CodeLogic.Core.Logging.LogLevel.Warning"/> if the string is invalid.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.LoggingConfig.GetConsoleLogLevel">
+            <summary>
+            Parses <see cref="P:CodeLogic.LoggingConfig.ConsoleMinimumLevel"/> to a <see cref="T:CodeLogic.Core.Logging.LogLevel"/> enum value.
+            Falls back to <see cref="F:CodeLogic.Core.Logging.LogLevel.Debug"/> if the string is invalid.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.LoggingConfig.ToLoggingOptions">
+            <summary>
+            Converts this configuration section to a <see cref="T:CodeLogic.Core.Logging.LoggingOptions"/> instance
+            suitable for passing to the <see cref="T:CodeLogic.Core.Logging.Logger"/> constructor.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.LocalizationConfig">
+            <summary>
+            Localization settings within <see cref="T:CodeLogic.CodeLogicConfiguration"/>.
+            Maps to the <c>"localization"</c> section in CodeLogic.json.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LocalizationConfig.DefaultCulture">
+            <summary>
+            The default culture used when a requested culture is not available.
+            All string models must have a complete translation for this culture.
+            Default: "en-US".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LocalizationConfig.SupportedCultures">
+            <summary>
+            List of all culture codes that will be loaded and supported.
+            Template files are generated for each culture on first run.
+            Default: ["en-US"].
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LocalizationConfig.AutoGenerateTemplates">
+            <summary>
+            When true, missing localization template files are auto-generated with default strings.
+            Default: true.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.LibrariesConfig">
+            <summary>
+            Library discovery and resolution settings within <see cref="T:CodeLogic.CodeLogicConfiguration"/>.
+            Maps to the <c>"libraries"</c> section in CodeLogic.json.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LibrariesConfig.DiscoveryPattern">
+            <summary>
+            Glob pattern used to discover library subdirectories under <c>Libraries/</c>.
+            Only directories matching this pattern are loaded. Default: "CL.*".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.LibrariesConfig.EnableDependencyResolution">
+            <summary>
+            When true, libraries are sorted by their declared dependencies before startup
+            (topological sort). When false, libraries start in registration order.
+            Default: true.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.HealthChecksConfig">
+            <summary>
+            Scheduled health check settings within <see cref="T:CodeLogic.CodeLogicConfiguration"/>.
+            Maps to the <c>"healthChecks"</c> section in CodeLogic.json.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.HealthChecksConfig.Enabled">
+            <summary>
+            When true, the framework runs health checks on a timer after startup.
+            Results are published as <see cref="T:CodeLogic.Core.Events.HealthCheckCompletedEvent"/> on the event bus.
+            Default: true.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.HealthChecksConfig.IntervalSeconds">
+            <summary>
+            How often (in seconds) to run scheduled health checks across all libraries and plugins.
+            Default: 30.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.CodeLogicOptions">
+            <summary>
+            Configuration options for the CodeLogic framework, passed to <see cref="M:CodeLogic.CodeLogic.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            Control paths, app identity, config-generation behavior, and shutdown handling.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.FrameworkRootPath">
+            <summary>
+            Root directory for framework files (CodeLogic.json, Libraries/, logs/).
+            Relative to the application base directory (<see cref="P:System.AppContext.BaseDirectory"/>).
+            Default: "CodeLogic".
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.ApplicationRootPath">
+            <summary>
+            Root directory for application files (config, localization, logs, data).
+            Defaults to <c>{FrameworkRootPath}/Application</c> when null.
+            Set this to an absolute or relative path to decouple application data from the framework root.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.AppVersion">
+            <summary>
+            Version string reported in logs, health checks, and <c>--version</c> CLI output.
+            Set this to your application's semantic version (e.g., "1.2.3").
+            Stored in <see cref="P:CodeLogic.CodeLogicEnvironment.AppVersion"/> after initialization.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.GenerateConfigs">
+            <summary>
+            When true, missing config files are auto-generated with defaults on startup.
+            Set to false to require all config files to exist before startup (strict mode).
+            Default: true.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.GenerateConfigsForce">
+            <summary>
+            When true, ALL config files are regenerated even if they already exist.
+            This is destructive — existing configs will be overwritten with defaults.
+            Use with caution; typically triggered by the <c>--generate-configs-force</c> CLI flag.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.GenerateConfigsFor">
+            <summary>
+            Scope config generation to specific library IDs. When null, all libraries are included.
+            Example: <c>new[] { "CL.SQLite", "CL.Mail" }</c>
+            Typically set from the <c>--generate-configs CL.SQLite CL.Mail</c> CLI syntax.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.ExitAfterGenerate">
+            <summary>
+            When true, the process exits after generating configs instead of continuing startup.
+            Default: false. Useful for CI pipelines that generate configs and then exit.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.DryRun">
+            <summary>
+            When true, the framework runs only the Configure phase, validates existing config and
+            localization files, prints any config files that would be generated or overwritten, and
+            then exits without starting any libraries or the application.
+            Useful for CI/CD pipelines that validate startup inputs without mutating the working tree.
+            Triggered by the <c>--dry-run</c> CLI flag.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.CodeLogicOptions.HandleShutdownSignals">
+            <summary>
+            When true, hooks <see cref="E:System.Console.CancelKeyPress"/> and
+            <see cref="E:System.AppDomain.ProcessExit"/> to call <c>StopAsync()</c> automatically.
+            Set to false if your host manages the application lifetime externally (e.g., a Windows Service).
+            Default: true.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetFrameworkPath">
+            <summary>
+            Returns the absolute path to the framework root directory.
+            Combines <see cref="P:System.AppContext.BaseDirectory"/> with <see cref="P:CodeLogic.CodeLogicOptions.FrameworkRootPath"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetCodeLogicConfigPath">
+            <summary>
+            Returns the absolute path to the main framework configuration file (CodeLogic.json).
+            Located at <c>{FrameworkRoot}/Framework/CodeLogic.json</c>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetCodeLogicDevelopmentConfigPath">
+            <summary>
+            Path to the development config replacement file (CodeLogic.Development.json).
+            Loaded instead of CodeLogic.json when the runtime is in development mode.
+            Add this file to .gitignore — it is per-machine and should never be committed.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetLibrariesPath">
+            <summary>
+            Returns the absolute path to the Libraries root directory.
+            Each library lives in a subdirectory named by its ID (e.g., <c>Libraries/CL.SQLite/</c>).
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetLibraryPath(System.String)">
+            <summary>
+            Returns the absolute path to a specific library's directory.
+            Normalizes the ID so both "SQLite" and "CL.SQLite" resolve to the same path.
+            </summary>
+            <param name="libraryId">The library ID with or without the "CL." prefix.</param>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetApplicationPath">
+            <summary>
+            Returns the absolute path to the application root directory.
+            Uses <see cref="P:CodeLogic.CodeLogicOptions.ApplicationRootPath"/> if set; otherwise defaults to
+            <c>{FrameworkRoot}/Application</c>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetApplicationConfigPath">
+            <summary>
+            Returns the absolute path to the application config directory.
+            Config files (config.json, config.db.json, etc.) are stored here.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetApplicationLocalizationPath">
+            <summary>
+            Returns the absolute path to the application localization directory.
+            Per-culture JSON files (e.g., <c>strings.en-US.json</c>) are stored here.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetApplicationLogsPath">
+            <summary>
+            Returns the absolute path to the application logs directory.
+            The application logger writes to this directory.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetApplicationDataPath">
+            <summary>
+            Returns the absolute path to the application data directory.
+            Use this for persistent application-owned files (databases, caches, etc.).
+            </summary>
+        </member>
+        <member name="M:CodeLogic.CodeLogicOptions.GetPluginsPath">
+            <summary>
+            Returns the absolute path to the Plugins directory.
+            Plugin subdirectories matching <c>*.Plugin</c> are discovered here.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.HealthReport">
+            <summary>
+            Aggregated health report from all running libraries, plugins, and the application.
+            Produced by <see cref="M:CodeLogic.ICodeLogicRuntime.GetHealthAsync"/>.
+            <see cref="P:CodeLogic.HealthReport.IsHealthy"/> is true only when ALL components are Healthy.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.IsHealthy">
+            <summary>
+            Overall health flag. True only when every library, plugin, and the application are Healthy.
+            False if any component is Degraded or Unhealthy.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.CheckedAt">
+            <summary>UTC timestamp when this report was generated.</summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.MachineName">
+            <summary>The machine name from <see cref="P:CodeLogic.CodeLogicEnvironment.MachineName"/>.</summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.AppVersion">
+            <summary>The application version from <see cref="P:CodeLogic.CodeLogicEnvironment.AppVersion"/>.</summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.Libraries">
+            <summary>
+            Health status for each library, keyed by library ID (e.g., "CL.SQLite").
+            Only includes libraries in the <see cref="F:CodeLogic.Framework.Libraries.LibraryState.Started"/> state.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.Plugins">
+            <summary>
+            Health status for each plugin, keyed by plugin ID.
+            Only includes plugins in the <see cref="F:CodeLogic.Framework.Application.Plugins.PluginState.Started"/> state.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.HealthReport.Application">
+            <summary>
+            Health status from the registered application, or null if no application is registered.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.HealthReport.ToJson">
+            <summary>
+            Serializes the report to indented JSON, suitable for monitoring systems or REST endpoints.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.HealthReport.ToConsoleString">
+            <summary>
+            Formats the report as a human-readable console table.
+            Suitable for terminal output after the <c>--health</c> CLI flag.
+            </summary>
+        </member>
+        <member name="T:CodeLogic.ICodeLogicRuntime">
+            <summary>
+            The core runtime contract for the CodeLogic framework.
+            Implemented by <see cref="T:CodeLogic.CodeLogicRuntime"/> and exposed via the <see cref="T:CodeLogic.CodeLogic"/> static facade.
+            For testing or advanced multi-runtime scenarios, depend on this interface directly.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})">
+            <summary>
+            Initializes the framework: applies options, parses CLI args, scaffolds the directory
+            structure on first run, loads CodeLogic.json (or CodeLogic.Development.json), and
+            creates the LibraryManager. Must be called before all other methods.
+            </summary>
+            <param name="configure">Optional delegate to configure <see cref="T:CodeLogic.CodeLogicOptions"/> before startup.</param>
+            <returns>
+            An <see cref="T:CodeLogic.InitializationResult"/> indicating success, failure, or whether the
+            process should exit (e.g., after <c>--version</c> or <c>--generate-configs</c>).
+            </returns>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.RegisterApplication(CodeLogic.Framework.Application.IApplication)">
+            <summary>
+            Registers the consuming application with the runtime.
+            Must be called after <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> and before <see cref="M:CodeLogic.ICodeLogicRuntime.ConfigureAsync"/>.
+            The application's <c>OnConfigureAsync</c> will be called during <see cref="M:CodeLogic.ICodeLogicRuntime.ConfigureAsync"/>.
+            </summary>
+            <param name="application">The application instance to register.</param>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.ConfigureAsync">
+            <summary>
+            Configures the application: discovers DLL-based libraries, runs the application's
+            <c>OnConfigureAsync</c>, generates and loads config and localization files.
+            Must be called after <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> and before <see cref="M:CodeLogic.ICodeLogicRuntime.StartAsync"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.StartAsync">
+            <summary>
+            Starts all registered libraries (Configure → Initialize → Start phases),
+            then starts the application (Initialize → Start phases).
+            Libraries are started in dependency order. Must be called after <see cref="M:CodeLogic.ICodeLogicRuntime.ConfigureAsync"/>.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.StopAsync">
+            <summary>
+            Gracefully stops the application first, then all plugins, then all libraries (in reverse start order).
+            Called automatically when shutdown signals are received if <see cref="P:CodeLogic.CodeLogicOptions.HandleShutdownSignals"/> is true.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.ResetAsync">
+            <summary>
+            Stops everything and resets the runtime to uninitialized state.
+            Allows calling <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/> again — useful for integration tests.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetHealthAsync">
+            <summary>
+            Collects health status from all running libraries, plugins, and the application.
+            Returns a <see cref="T:CodeLogic.HealthReport"/> with an overall <c>IsHealthy</c> flag.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetLibraryManager">
+            <summary>
+            Returns the <see cref="T:CodeLogic.Framework.Libraries.LibraryManager"/> created during <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>,
+            or null if the runtime has not been initialized.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetApplication">
+            <summary>
+            Returns the registered <see cref="T:CodeLogic.Framework.Application.IApplication"/> instance, or null if none registered.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetApplicationContext">
+            <summary>
+            Returns the <see cref="T:CodeLogic.Framework.Application.ApplicationContext"/> created during <see cref="M:CodeLogic.ICodeLogicRuntime.ConfigureAsync"/>,
+            or null if the application has not been configured yet.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetEventBus">
+            <summary>
+            Returns the shared <see cref="T:CodeLogic.Core.Events.IEventBus"/> instance used across all libraries and the application.
+            Always available after construction (before initialization).
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetOptions">
+            <summary>
+            Returns the <see cref="T:CodeLogic.CodeLogicOptions"/> applied during <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            Throws <see cref="T:System.InvalidOperationException"/> if not yet initialized.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetConfiguration">
+            <summary>
+            Returns the deserialized <see cref="T:CodeLogic.CodeLogicConfiguration"/> from CodeLogic.json.
+            Throws <see cref="T:System.InvalidOperationException"/> if not yet initialized.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.SetPluginManager(CodeLogic.Framework.Application.Plugins.PluginManager)">
+            <summary>
+            Registers an app-managed PluginManager with the runtime so it participates
+            in health checks and graceful shutdown. Call after InitializeAsync.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.ICodeLogicRuntime.GetPluginManager">
+            <summary>Returns the registered PluginManager, or null if none registered.</summary>
+        </member>
+        <member name="T:CodeLogic.InitializationResult">
+            <summary>
+            The result of <see cref="M:CodeLogic.ICodeLogicRuntime.InitializeAsync(System.Action{CodeLogic.CodeLogicOptions})"/>.
+            Always check <see cref="P:CodeLogic.InitializationResult.ShouldExit"/> immediately after initialization —
+            CLI flags like <c>--version</c> and <c>--info</c> set this to true.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.InitializationResult.Success">
+            <summary>
+            True when initialization completed without errors.
+            False indicates a fatal startup failure — check <see cref="P:CodeLogic.InitializationResult.Message"/> for details.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.InitializationResult.IsFirstRun">
+            <summary>
+            True when the framework directory structure was just scaffolded for the first time.
+            Informational — first-run scaffolding does not prevent normal startup.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.InitializationResult.ShouldExit">
+            <summary>
+            True when the process should exit without continuing startup.
+            Set by <c>--version</c>, <c>--info</c>, <c>--generate-configs</c> with <c>ExitAfterGenerate=true</c>,
+            and initialization failures.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.InitializationResult.Message">
+            <summary>
+            A human-readable description of the result. On failure, contains the error message.
+            </summary>
+        </member>
+        <member name="P:CodeLogic.InitializationResult.RunHealthCheck">
+            <summary>
+            When true, the caller should run the full startup sequence, print a health report
+            after <c>StartAsync()</c>, then exit. Set by the <c>--health</c> CLI flag.
+            </summary>
+        </member>
+        <member name="M:CodeLogic.InitializationResult.Succeeded(System.Boolean,System.Boolean)">
+            <summary>
+            Creates a successful result. <see cref="P:CodeLogic.InitializationResult.ShouldExit"/> is false — startup continues normally.
+            </summary>
+            <param name="isFirstRun">True if the directory structure was just created.</param>
+            <param name="runHealthCheck">True if the caller should run a health check after startup.</param>
+        </member>
+        <member name="M:CodeLogic.InitializationResult.Failed(System.String)">
+            <summary>
+            Creates a failed result. <see cref="P:CodeLogic.InitializationResult.ShouldExit"/> is true and <see cref="P:CodeLogic.InitializationResult.Success"/> is false.
+            </summary>
+            <param name="message">A description of why initialization failed.</param>
+        </member>
+        <member name="M:CodeLogic.InitializationResult.Exit(System.String)">
+            <summary>
+            Creates a successful-but-exit result (e.g., after handling <c>--version</c> or <c>--info</c>).
+            <see cref="P:CodeLogic.InitializationResult.Success"/> is true and <see cref="P:CodeLogic.InitializationResult.ShouldExit"/> is true.
+            </summary>
+            <param name="message">A description of why the process should exit (e.g., "--version").</param>
+        </member>
+    </members>
+</doc>

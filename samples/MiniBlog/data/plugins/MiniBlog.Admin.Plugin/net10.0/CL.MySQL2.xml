@@ -1,0 +1,843 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CL.MySQL2</name>
+    </assembly>
+    <members>
+        <member name="T:CL.MySQL2.Configuration.DatabaseConfiguration">
+            <summary>
+            Root configuration for <c>CL.MySQL2</c>.
+            Serialized to / from <c>config.mysql.json</c> in the library's config directory.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.DatabaseConfiguration.Databases">
+            <summary>
+            Named database configurations keyed by connection ID.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Configuration.DatabaseConfiguration.Validate">
+            <summary>
+            Validates all configured databases.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Configuration.MySqlDatabaseConfig">
+            <summary>
+            Per-database MySQL connection settings.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Enabled">
+            <summary>Whether this database connection is active.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Host">
+            <summary>MySQL server hostname or IP address.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Port">
+            <summary>MySQL server port. Default: 3306.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Database">
+            <summary>Database (schema) name.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Username">
+            <summary>MySQL username.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Password">
+            <summary>MySQL password.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.EnablePooling">
+            <summary>Whether connection pooling is enabled. Default: true.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.MinPoolSize">
+            <summary>Minimum number of pooled connections. Default: 1.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.MaxPoolSize">
+            <summary>Maximum number of pooled connections. Default: 100.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.ConnectionLifetime">
+            <summary>Maximum connection lifetime in seconds. Default: 300.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.ConnectionTimeout">
+            <summary>Connection timeout in seconds. Default: 30.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.CommandTimeout">
+            <summary>Command timeout in seconds. Default: 30.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.EnableSsl">
+            <summary>Whether to require SSL/TLS for connections. Default: false.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SslCertificatePath">
+            <summary>Path to a client SSL certificate file. Optional.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.AllowPublicKeyRetrieval">
+            <summary>Whether to allow servers without RSA public key. Default: false.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.CharacterSet">
+            <summary>Connection character set. Default: "utf8mb4".</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Collation">
+            <summary>Default collation. Default: "utf8mb4_unicode_ci".</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.AllowDestructiveSync">
+            <summary>
+            When false (default), the table sync will never DROP or TRUNCATE existing data.
+            Set to true only in development environments.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.BackupDirectory">
+            <summary>
+            Directory for schema backup files.
+            Null = <c>DataDirectory/backups</c>.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SlowQueryThresholdMs">
+            <summary>Queries exceeding this threshold (ms) are logged as slow queries. Default: 1000.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Configuration.MySqlDatabaseConfig.BuildConnectionString">
+            <summary>
+            Builds and returns the MySqlConnector connection string from the current configuration.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Configuration.MySqlDatabaseConfig.Validate">
+            <summary>
+            Validates the per-database configuration.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.MySqlExpressionVisitor">
+            <summary>
+            Translates LINQ lambda expressions into MySQL WHERE clause fragments and parameter dictionaries.
+            Supports binary comparisons, logical operators, method calls (Contains, StartsWith, EndsWith),
+            and null checks.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.MySqlExpressionVisitor.Translate``1(System.Linq.Expressions.Expression{System.Func{``0,System.Boolean}},System.String)">
+            <summary>
+            Translates the body of a predicate lambda into a SQL WHERE fragment.
+            </summary>
+            <typeparam name="T">The entity type.</typeparam>
+            <param name="predicate">The lambda expression to translate.</param>
+            <param name="tableAlias">Optional table alias prefix for column references.</param>
+            <returns>SQL fragment and parameter dictionary.</returns>
+        </member>
+        <member name="M:CL.MySQL2.Core.MySqlExpressionVisitor.TranslateSelector``2(System.Linq.Expressions.Expression{System.Func{``0,``1}})">
+            <summary>
+            Translates a member selector lambda into a column name string.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.SchemaAnalyzer">
+            <summary>
+            Analyzes entity types and generates the DDL statements required to create or alter
+            the corresponding MySQL table so it matches the current class definition.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.GetTableName(System.Type)">
+            <summary>Returns the table name for the given entity type.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.GenerateCreateTable(System.Type)">
+            <summary>
+            Generates a CREATE TABLE IF NOT EXISTS statement for the given entity type.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.GenerateAlterStatementsAsync(System.Type,MySqlConnector.MySqlConnection,System.Threading.CancellationToken)">
+            <summary>
+            Compares the entity type definition against the live database schema and returns
+            a list of ALTER TABLE statements needed to bring the table in sync.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.TypeConverter">
+            <summary>
+            Converts between MySQL/CLR types and generates DDL type strings from <see cref="T:CL.MySQL2.Models.ColumnAttribute"/> metadata.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.GetMySqlType(CL.MySQL2.Models.ColumnAttribute)">
+            <summary>
+            Returns the MySQL DDL type string for the given column attribute (e.g., "VARCHAR(255)", "DECIMAL(10,2)").
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.ToDbValue(System.Object)">
+            <summary>
+            Converts a CLR value to a form suitable for use as a MySqlConnector parameter value.
+            Handles enums, nullable types, and MySqlDateTime.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.FromDbValue(System.Object,System.Type)">
+            <summary>
+            Converts a database value read from a MySqlDataReader to the target CLR type.
+            Handles DBNull, enums, and MySqlDateTime.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.InferDataType(System.Type)">
+            <summary>
+            Infers the best-matching <see cref="T:CL.MySQL2.Models.DataType"/> for a CLR type.
+            Used when reflecting entity properties without explicit <see cref="T:CL.MySQL2.Models.ColumnAttribute"/>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.DatabaseConnectedEvent">
+            <summary>Published when a MySQL connection is successfully opened.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.DatabaseConnectedEvent.#ctor(System.String,System.String,System.Int32,System.String,System.DateTime)">
+            <summary>Published when a MySQL connection is successfully opened.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.DatabaseDisconnectedEvent">
+            <summary>Published when a MySQL connection is closed.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.DatabaseDisconnectedEvent.#ctor(System.String,System.DateTime)">
+            <summary>Published when a MySQL connection is closed.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.TableSyncedEvent">
+            <summary>Published after a table is synchronized (created or altered).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.TableSyncedEvent.#ctor(System.String,System.String,System.Boolean,System.Collections.Generic.List{System.String},System.TimeSpan)">
+            <summary>Published after a table is synchronized (created or altered).</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.SlowQueryEvent">
+            <summary>Published when a query exceeds the configured slow-query threshold.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.SlowQueryEvent.#ctor(System.String,System.String,System.Int64,System.DateTime)">
+            <summary>Published when a query exceeds the configured slow-query threshold.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.HealthChangedEvent">
+            <summary>Published when the library's health state changes.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.HealthChangedEvent.#ctor(System.String,System.Boolean,System.String,System.DateTime)">
+            <summary>Published when the library's health state changes.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Localization.MySQL2Strings">
+            <summary>
+            Localized strings for the CL.MySQL2 library.
+            Serialized to / from <c>mysql.{culture}.json</c> in the library's localization directory.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.TableAttribute">
+            <summary>
+            Marks a class as a database table entity.
+            Apply to a class to enable table sync and repository operations.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.TableAttribute.Name">
+            <summary>Custom table name. Defaults to the class name if null.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.TableAttribute.Engine">
+            <summary>MySQL storage engine. Default: InnoDB.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.TableAttribute.Charset">
+            <summary>Table character set. Default: utf8mb4.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.TableAttribute.Collation">
+            <summary>Table collation (e.g., "utf8mb4_unicode_ci"). Optional.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.TableAttribute.Comment">
+            <summary>Table comment. Optional.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.ColumnAttribute">
+            <summary>
+            Maps a property to a database column with optional schema metadata.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Name">
+            <summary>Custom column name. Defaults to the property name if null.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.DataType">
+            <summary>MySQL data type for the column.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Size">
+            <summary>Column size / length (e.g., 255 for VARCHAR(255)). 0 = type default.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Precision">
+            <summary>Numeric precision (for DECIMAL columns). Default: 10.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Scale">
+            <summary>Numeric scale (decimal places, for DECIMAL columns). Default: 2.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Primary">
+            <summary>Whether this column is the primary key.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.AutoIncrement">
+            <summary>Whether this column uses AUTO_INCREMENT.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.NotNull">
+            <summary>Whether this column has a NOT NULL constraint.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Unique">
+            <summary>Whether this column has a UNIQUE constraint.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Index">
+            <summary>Whether this column has a plain INDEX.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.DefaultValue">
+            <summary>Default value expression (e.g., "0", "'active'", "CURRENT_TIMESTAMP").</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Charset">
+            <summary>Column-level character set override (for string types). Optional.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Comment">
+            <summary>Column comment. Optional.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.Unsigned">
+            <summary>Whether this column is UNSIGNED (for numeric types).</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.OnUpdateCurrentTimestamp">
+            <summary>Whether to add ON UPDATE CURRENT_TIMESTAMP (for TIMESTAMP/DATETIME).</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.ForeignKeyAttribute">
+            <summary>
+            Declares a foreign key constraint on a column property.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ForeignKeyAttribute.ReferenceTable">
+            <summary>The referenced table name. Required.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ForeignKeyAttribute.ReferenceColumn">
+            <summary>The referenced column name. Required.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ForeignKeyAttribute.OnDelete">
+            <summary>Action when the referenced row is deleted. Default: Restrict.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ForeignKeyAttribute.OnUpdate">
+            <summary>Action when the referenced row is updated. Default: Restrict.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ForeignKeyAttribute.ConstraintName">
+            <summary>Custom constraint name. Auto-generated if null.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.ForeignKeyAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Declares a foreign key to the specified table and column.
+            </summary>
+            <param name="referenceTable">The referenced table name.</param>
+            <param name="referenceColumn">The referenced column name.</param>
+        </member>
+        <member name="T:CL.MySQL2.Models.ForeignKeyAction">
+            <summary>Referential action for ON DELETE / ON UPDATE foreign key clauses.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.IgnoreAttribute">
+            <summary>
+            Excludes a property from all database operations (read, write, schema sync).
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.CompositeIndexAttribute">
+            <summary>
+            Declares a composite index spanning multiple columns.
+            Apply to the class (not a single property) by using the index column names.
+            Can be applied multiple times for multiple composite indexes.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.CompositeIndexAttribute.IndexName">
+            <summary>The index name (must be unique within the table).</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.CompositeIndexAttribute.ColumnNames">
+            <summary>The column names included in this index.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.CompositeIndexAttribute.Unique">
+            <summary>Whether this is a unique index. Default: false.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.CompositeIndexAttribute.#ctor(System.String,System.String[])">
+            <summary>
+            Declares a composite index with the given name covering the specified columns.
+            </summary>
+            <param name="indexName">Index name (unique within the table).</param>
+            <param name="columnNames">One or more column names to include.</param>
+        </member>
+        <member name="T:CL.MySQL2.Models.ManyToManyAttribute">
+            <summary>
+            Marks a property as a many-to-many navigation property resolved via a junction table entity.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ManyToManyAttribute.JunctionEntityType">
+            <summary>The CLR type of the junction table entity.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.ManyToManyAttribute.#ctor(System.Type)">
+            <summary>
+            Declares a many-to-many relationship via the specified junction entity type.
+            </summary>
+            <param name="junctionEntityType">The junction table entity type.</param>
+        </member>
+        <member name="T:CL.MySQL2.Models.DataType">
+            <summary>MySQL column data types.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.TableEngine">
+            <summary>MySQL storage engine options.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.Charset">
+            <summary>MySQL character set options.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.SortOrder">
+            <summary>Sort order for query results.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.OperationType">
+            <summary>Type of DML operation performed on a record.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.PagedResult`1">
+            <summary>
+            Represents a page of results from a paged query.
+            </summary>
+            <typeparam name="T">The entity type.</typeparam>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.Items">
+            <summary>The items on the current page.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.PageNumber">
+            <summary>The 1-based page number.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.PageSize">
+            <summary>The maximum number of items per page.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.TotalItems">
+            <summary>Total number of items across all pages.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.TotalPages">
+            <summary>Total number of pages.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.HasPreviousPage">
+            <summary>True when there is a page before this one.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.PagedResult`1.HasNextPage">
+            <summary>True when there is a page after this one.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.WhereCondition">
+            <summary>
+            A single WHERE predicate clause for use in dynamic queries.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.WhereCondition.Column">
+            <summary>The column name to filter on. Required.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.WhereCondition.Operator">
+            <summary>Comparison operator (e.g., "=", "!=", ">", "LIKE"). Default: "=".</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.WhereCondition.Value">
+            <summary>The value to compare against.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.WhereCondition.LogicalOperator">
+            <summary>Logical connector to the previous clause ("AND" or "OR"). Default: "AND".</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.OrderByClause">
+            <summary>
+            Specifies an ORDER BY clause for a query.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.OrderByClause.Column">
+            <summary>The column to sort by. Required.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.OrderByClause.Order">
+            <summary>Sort direction. Default: Asc.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.JoinClause">
+            <summary>
+            Specifies a JOIN clause for a query.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.JoinClause.Type">
+            <summary>The JOIN type. Default: Inner.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.JoinClause.Table">
+            <summary>The table to join. Required.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.JoinClause.Condition">
+            <summary>The ON condition (e.g., "a.id = b.a_id"). Required.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.JoinType">
+            <summary>SQL JOIN types.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.AggregateFunction">
+            <summary>
+            Describes a SQL aggregate function applied to a column.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.AggregateFunction.Type">
+            <summary>The aggregate type (COUNT, SUM, etc.).</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.AggregateFunction.Column">
+            <summary>The column the function is applied to. Required.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.AggregateFunction.Alias">
+            <summary>The alias for the result column. Required.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.AggregateType">
+            <summary>SQL aggregate function types.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.SyncResult">
+            <summary>
+            The result of a table synchronization operation.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.Success">
+            <summary>Whether the sync completed without errors.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.TableName">
+            <summary>The name of the table that was synced.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.Operations">
+            <summary>DDL operations performed (e.g., "CREATE TABLE", "ADD COLUMN x").</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.Errors">
+            <summary>Any non-fatal errors encountered during the sync.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.Duration">
+            <summary>How long the sync took.</summary>
+        </member>
+        <member name="T:CL.MySQL2.MySQL2Library">
+            <summary>
+            <b>CL.MySQL2</b> — CodeLogic library providing MySQL database access with a fluent
+            LINQ query builder, automatic table synchronization, migrations, schema backups,
+            and multiple named database connections.
+            <para>
+            Lifecycle:
+            <list type="number">
+              <item><description><b>Configure</b> — Registers <see cref="T:CL.MySQL2.Configuration.DatabaseConfiguration"/> and <see cref="T:CL.MySQL2.Localization.MySQL2Strings"/>.</description></item>
+              <item><description><b>Initialize</b> — Loads config, validates, creates <see cref="P:CL.MySQL2.MySQL2Library.ConnectionManager"/> and <see cref="T:CL.MySQL2.Services.TableSyncService"/>. Tests the connection.</description></item>
+              <item><description><b>Start</b> — Runs a health check and logs server version.</description></item>
+              <item><description><b>Stop</b> — Closes connections and disposes resources.</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.MySQL2Library.Manifest">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.OnStopAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.HealthCheckAsync">
+            <inheritdoc/>
+        </member>
+        <member name="P:CL.MySQL2.MySQL2Library.ConnectionManager">
+            <summary>Returns the <see cref="P:CL.MySQL2.MySQL2Library.ConnectionManager"/>.</summary>
+            <exception cref="T:System.InvalidOperationException">Thrown when the library is not initialized or disabled.</exception>
+        </member>
+        <member name="P:CL.MySQL2.MySQL2Library.TableSync">
+            <summary>Returns the <see cref="T:CL.MySQL2.Services.TableSyncService"/>.</summary>
+            <exception cref="T:System.InvalidOperationException">Thrown when the library is not initialized or disabled.</exception>
+        </member>
+        <member name="P:CL.MySQL2.MySQL2Library.MigrationTracker">
+            <summary>Returns the <see cref="P:CL.MySQL2.MySQL2Library.MigrationTracker"/>.</summary>
+        </member>
+        <member name="P:CL.MySQL2.MySQL2Library.BackupManager">
+            <summary>Returns the <see cref="P:CL.MySQL2.MySQL2Library.BackupManager"/>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.GetRepository``1(System.String)">
+            <summary>
+            Creates a <see cref="T:CL.MySQL2.Services.Repository`1"/> for the given entity type.
+            </summary>
+            <typeparam name="T">The entity type.</typeparam>
+            <param name="connectionId">The connection ID to use. Default: "Default".</param>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.Query``1(System.String)">
+            <summary>
+            Creates a fluent <see cref="T:CL.MySQL2.Services.QueryBuilder`1"/> for the given entity type.
+            </summary>
+            <typeparam name="T">The entity type.</typeparam>
+            <param name="connectionId">The connection ID to use. Default: "Default".</param>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.BeginTransactionAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Begins a new database transaction and returns a <see cref="T:CL.MySQL2.Services.TransactionScope"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.SyncTableAsync``1(System.Boolean,System.String)">
+            <summary>
+            Syncs the table schema for the specified entity type.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.TestConnectionAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Tests the MySQL connection for the given connection ID.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.MySQL2.Services.BackupManager">
+            <summary>
+            Creates and manages schema backup files for MySQL tables and databases.
+            Backups contain DDL (CREATE TABLE statements) and are stored as .sql files.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.BackupManager.BackupTableSchemaAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Backs up the CREATE TABLE DDL for the specified table to a timestamped .sql file.
+            </summary>
+            <param name="tableName">The table to back up.</param>
+            <param name="connectionId">The connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.BackupManager.BackupDatabaseSchemaAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Backs up the DDL for all tables in the current database.
+            </summary>
+            <param name="connectionId">The connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.BackupManager.CleanupOldBackupsAsync(System.Int32)">
+            <summary>
+            Removes backup files older than the specified number of days.
+            </summary>
+            <param name="olderThanDays">Files older than this many days will be deleted.</param>
+            <returns>The number of files deleted.</returns>
+        </member>
+        <member name="T:CL.MySQL2.Services.ConnectionManager">
+            <summary>
+            Manages MySQL database connections — registration, pooling, health checking,
+            and transaction orchestration for multiple named connection IDs.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.#ctor(CodeLogic.Core.Logging.ILogger,CodeLogic.Core.Events.IEventBus)">
+            <summary>
+            Creates a ConnectionManager.
+            </summary>
+            <param name="logger">Optional logger.</param>
+            <param name="events">Optional event bus for publishing connection events.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.RegisterConfiguration(CL.MySQL2.Configuration.MySqlDatabaseConfig,System.String)">
+            <summary>
+            Registers (or replaces) a connection configuration under a given ID.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.GetConfiguration(System.String)">
+            <summary>Returns the configuration for the given connection ID, or null if not found.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.HasConfiguration(System.String)">
+            <summary>Returns true when a configuration exists for the given connection ID.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.GetConnectionString(System.String)">
+            <summary>Builds the ADO.NET connection string for the given connection ID.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.OpenConnectionAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Opens and returns a new <see cref="T:MySqlConnector.MySqlConnection"/> for the given connection ID.
+            Publishes a <see cref="T:CL.MySQL2.Events.DatabaseConnectedEvent"/> on success.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.CloseConnectionAsync(MySqlConnector.MySqlConnection)">
+            <summary>
+            Closes the connection and publishes a <see cref="T:CL.MySQL2.Events.DatabaseDisconnectedEvent"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.TestConnectionAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Tests connectivity for the given connection ID.
+            Returns true on success, false on failure (does not throw).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.ExecuteWithConnectionAsync``1(System.Func{MySqlConnector.MySqlConnection,System.Threading.Tasks.Task{``0}},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Opens a connection, executes the given action, closes the connection, and returns the result.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.ExecuteWithTransactionAsync``1(System.Func{MySqlConnector.MySqlConnection,MySqlConnector.MySqlTransaction,System.Threading.Tasks.Task{``0}},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Opens a connection, begins a transaction, executes the action, commits, and returns the result.
+            Rolls back automatically on exception.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.GetServerInfoAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Retrieves version and database metadata from the MySQL server.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.GetOpenConnectionCount(System.String)">
+            <summary>Returns the current open connection count for the given connection ID.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.GetAllConnectionCounts">
+            <summary>Returns a snapshot of open connection counts for all registered IDs.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.GetConnectionIds">
+            <summary>Returns the registered connection IDs.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.ServerInfo">
+            <summary>Basic MySQL server metadata.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ServerInfo.#ctor(System.String,System.String,System.String,System.String)">
+            <summary>Basic MySQL server metadata.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.MigrationTracker">
+            <summary>
+            Tracks applied database migrations in a dedicated <c>__migrations</c> table.
+            Supports recording migrations and querying applied history.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationTracker.EnsureMigrationsTableAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Ensures the migrations tracking table exists.
+            Should be called once during library initialization.
+            </summary>
+            <param name="connectionId">Connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationTracker.HasMigrationBeenAppliedAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns true when the migration with the given ID has already been applied.
+            </summary>
+            <param name="migrationId">The unique migration identifier.</param>
+            <param name="connectionId">Connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationTracker.RecordMigrationAsync(System.String,System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Records a successfully applied migration.
+            </summary>
+            <param name="migrationId">The unique migration identifier.</param>
+            <param name="description">Human-readable description. Optional.</param>
+            <param name="checksum">Optional checksum of the migration script.</param>
+            <param name="connectionId">Connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationTracker.GetAppliedMigrationsAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns the list of all applied migration records, ordered by application date.
+            </summary>
+            <param name="connectionId">Connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationTracker.RemoveMigrationRecordAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Removes a migration record (e.g., for rollback purposes).
+            </summary>
+            <param name="migrationId">The migration ID to remove.</param>
+            <param name="connectionId">Connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="T:CL.MySQL2.Services.MigrationRecord">
+            <summary>
+            Represents a single applied migration record from the tracking table.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRecord.#ctor(System.Int32,System.String,System.String,System.DateTime,System.String)">
+            <summary>
+            Represents a single applied migration record from the tracking table.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.QueryBuilder`1">
+            <summary>
+            Fluent query builder for entity type <typeparamref name="T"/>.
+            Chains WHERE, ORDER BY, JOIN, GROUP BY, LIMIT/OFFSET clauses and executes
+            terminal operations returning <see cref="T:CodeLogic.Core.Results.Result`1"/>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.Repository`1">
+            <summary>
+            Generic repository providing CRUD and query operations for entity type <typeparamref name="T"/>.
+            Uses reflection with a static per-type cache for performance.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.#ctor(CL.MySQL2.Services.ConnectionManager,CodeLogic.Core.Logging.ILogger,System.String,System.Int32)">
+            <summary>
+            Creates a repository using the given connection manager and connection ID.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.#ctor(CL.MySQL2.Services.ConnectionManager,CodeLogic.Core.Logging.ILogger,CL.MySQL2.Services.TransactionScope,System.Int32)">
+            <summary>
+            Creates a repository that participates in an existing transaction scope.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.InsertAsync(`0,System.Threading.CancellationToken)">
+            <summary>Inserts a single entity and returns the inserted entity (with auto-generated ID if applicable).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.InsertManyAsync(System.Collections.Generic.IEnumerable{`0},System.Threading.CancellationToken)">
+            <summary>Bulk-inserts a collection of entities and returns the count inserted.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.GetByIdAsync(System.Object,System.Threading.CancellationToken)">
+            <summary>Retrieves an entity by its primary key value.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.GetByColumnAsync(System.String,System.Object,System.Threading.CancellationToken)">
+            <summary>Retrieves all entities where the specified column equals the given value.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.GetAllAsync(System.Threading.CancellationToken)">
+            <summary>Retrieves all entities in the table.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.GetPagedAsync(System.Int32,System.Int32,System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>Retrieves a paged result set.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.CountAsync(System.Threading.CancellationToken)">
+            <summary>Returns the total row count for the table.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.UpdateAsync(`0,System.Threading.CancellationToken)">
+            <summary>Updates an existing entity and returns the updated entity.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.DeleteAsync(System.Object,System.Threading.CancellationToken)">
+            <summary>Deletes an entity by its primary key value.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.IncrementAsync``1(System.Object,System.Linq.Expressions.Expression{System.Func{`0,``0}},``0,System.Threading.CancellationToken)">
+            <summary>Atomically increments a numeric property by the given amount.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.DecrementAsync``1(System.Object,System.Linq.Expressions.Expression{System.Func{`0,``0}},``0,System.Threading.CancellationToken)">
+            <summary>Atomically decrements a numeric property by the given amount.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.FindAsync(System.Linq.Expressions.Expression{System.Func{`0,System.Boolean}},System.Threading.CancellationToken)">
+            <summary>Returns all entities matching the given LINQ predicate.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.TableSyncService">
+            <summary>
+            Synchronizes database table schema with entity class definitions.
+            Uses <see cref="T:CL.MySQL2.Core.SchemaAnalyzer"/> to detect and apply CREATE/ALTER TABLE statements.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.#ctor(CL.MySQL2.Services.ConnectionManager,System.String,CodeLogic.Core.Logging.ILogger,CodeLogic.Core.Events.IEventBus)">
+            <param name="connectionManager">The connection manager to use for database access.</param>
+            <param name="dataDirectory">Base data directory (for backup and migration storage).</param>
+            <param name="logger">Optional logger.</param>
+            <param name="events">Optional event bus for publishing sync events.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.SyncTableAsync``1(System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Synchronizes the table schema for entity type <typeparamref name="T"/>.
+            Creates the table if it doesn't exist, or alters it to add missing columns/indexes.
+            </summary>
+            <param name="createBackup">Whether to back up the current schema before making changes.</param>
+            <param name="connectionId">The connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.SyncTablesAsync(System.Collections.Generic.IEnumerable{System.Type},System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Synchronizes multiple entity types and returns a dictionary of results.
+            </summary>
+            <param name="entityTypes">Entity types to sync.</param>
+            <param name="createBackup">Whether to back up schemas before altering.</param>
+            <param name="connectionId">The connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.GetMigrationTracker">
+            <summary>Returns the <see cref="T:CL.MySQL2.Services.MigrationTracker"/> used by this service.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.GetBackupManager">
+            <summary>Returns the <see cref="T:CL.MySQL2.Services.BackupManager"/> used by this service.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.TransactionScope">
+            <summary>
+            Wraps a <see cref="T:MySqlConnector.MySqlTransaction"/> with an async-disposable pattern.
+            When disposed without an explicit <see cref="M:CL.MySQL2.Services.TransactionScope.CommitAsync(System.Threading.CancellationToken)"/> or <see cref="M:CL.MySQL2.Services.TransactionScope.RollbackAsync(System.Threading.CancellationToken)"/> call,
+            the transaction is automatically rolled back.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.TransactionScope.ConnectionId">
+            <summary>The connection ID this transaction belongs to.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.TransactionScope.Connection">
+            <summary>The underlying database connection.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.TransactionScope.Transaction">
+            <summary>The underlying database transaction.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.TransactionScope.CommitAsync(System.Threading.CancellationToken)">
+            <summary>
+            Commits the transaction.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">Thrown if already committed or rolled back.</exception>
+        </member>
+        <member name="M:CL.MySQL2.Services.TransactionScope.RollbackAsync(System.Threading.CancellationToken)">
+            <summary>
+            Rolls back the transaction explicitly.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">Thrown if already committed or rolled back.</exception>
+        </member>
+        <member name="M:CL.MySQL2.Services.TransactionScope.DisposeAsync">
+            <summary>
+            Disposes the transaction. Automatically rolls back if not already committed/rolled back.
+            </summary>
+        </member>
+    </members>
+</doc>

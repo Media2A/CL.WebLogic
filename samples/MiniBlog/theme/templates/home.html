@@ -1,0 +1,29 @@
+{layout:layouts/main}
+
+<section class="container-grid">
+    <article class="feature-story">
+        <p class="section-label">Featured</p>
+        <h2>{model:featured_post.Title}</h2>
+        <p>{model:featured_post.Summary}</p>
+        <a class="btn btn-ink" href="/posts/{model:featured_post.Slug}">Read feature</a>
+    </article>
+    <aside class="sidebar-stack">
+        {widgetarea:home.sidebar}
+    </aside>
+</section>
+
+<section class="post-grid-section">
+    <div class="section-heading">
+        <h3>Recent writing</h3>
+        <a href="/posts">See all posts</a>
+    </div>
+    <div class="post-grid">
+        {foreach:model:recent_posts}
+            <article class="post-card">
+                <p class="post-card__meta">{item:AuthorDisplayName}</p>
+                <h4><a href="/posts/{item:Slug}">{item:Title}</a></h4>
+                <p>{item:Summary}</p>
+            </article>
+        {/foreach}
+    </div>
+</section>

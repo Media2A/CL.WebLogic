@@ -299,6 +299,12 @@
             return false;
         }
 
+        const currentLayout = currentShell.getAttribute("data-weblogic-layout") || "";
+        const nextLayout = nextShell.getAttribute("data-weblogic-layout") || "";
+        if (currentLayout !== nextLayout) {
+            return false;
+        }
+
         currentShell.replaceWith(nextShell);
         executeScripts(nextShell);
         return true;
@@ -403,19 +409,30 @@
             });
         });
 
+        window.history.replaceState({ url: normalizePath(window.location.href) }, "", window.location.href);
+
         window.addEventListener("popstate", function (event) {
-            if (event.state && event.state.url) {
-                navigate(event.state.url, {
-                    push: false,
-                    source: "history"
-                });
-            }
+            var url = (event.state && event.state.url) ? event.state.url : normalizePath(window.location.href);
+            navigate(url, {
+                push: false,
+                source: "history"
+            });
         });
     }
 
     function initialize() {
         bindNavigation();
         bindForms();
+        bindWidgets();
+
+        if (state.config.realtime.enabled) {
+            connectRealtime().catch(function () {});
+        }
+
+        on("navigate:complete", function () {
+            bindWidgets();
+        });
+
         emit("ready", {});
     }
 
@@ -1266,6 +1283,76 @@
         return jobs.length ? $.when.apply($, jobs) : $.Deferred().resolve().promise();
     }
 
+    function bindWidgets() {
+        // Auto-bind widget action buttons: <button data-widget-action="actionName" data-widget-name="myWidget">
+        $(document).off("click.weblogic-widget-action").on("click.weblogic-widget-action", "[data-widget-action]", function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var $container = $btn.closest("[data-widget-name]");
+            var actionName = $btn.data("widget-action");
+            var widgetName = $btn.data("widget-name") || $container.data("widget-name");
+            var instanceId = $btn.data("widget-instance") || $container.data("widget-instance") || "";
+
+            if (!actionName || !widgetName) {
+                return;
+            }
+
+            var payload = {};
+            $btn.find("input, select, textarea").each(function () {
+                payload[this.name] = $(this).val();
+            });
+            $.extend(payload, $btn.data());
+
+            $btn.prop("disabled", true);
+            emit("widgets:action-start", { action: actionName, widget: widgetName, instance: instanceId });
+
+            runWidgetAction({
+                name: widgetName,
+                instanceId: instanceId,
+                action: actionName,
+                payload: JSON.stringify(payload)
+            }).done(function (response) {
+                handleWidgetActionResponse(response, {
+                    widget: $container.length ? $container : null
+                });
+            }).fail(function (error) {
+                emit("widgets:action-error", { action: actionName, widget: widgetName, error: error });
+            }).always(function () {
+                $btn.prop("disabled", false);
+            });
+        });
+
+        // Auto-bind widget refresh buttons: <button data-widget-refresh="instanceId">
+        $(document).off("click.weblogic-widget-refresh").on("click.weblogic-widget-refresh", "[data-widget-refresh]", function (e) {
+            e.preventDefault();
+            var instanceId = $(this).data("widget-refresh");
+            if (instanceId === true || instanceId === "self") {
+                refreshWidgetInstance($(this).closest("[data-widget-name]"));
+            } else {
+                refreshWidgetInstanceById(String(instanceId));
+            }
+        });
+
+        // Auto-bind widget area refresh: <button data-widget-area-refresh="areaName">
+        $(document).off("click.weblogic-widget-area-refresh").on("click.weblogic-widget-area-refresh", "[data-widget-area-refresh]", function (e) {
+            e.preventDefault();
+            refreshWidgetArea($(this).data("widget-area-refresh"));
+        });
+
+        // Auto-load widget data on init: <div data-widget-name="myWidget" data-widget-autoload="true">
+        $("[data-widget-autoload]").each(function () {
+            var $el = $(this);
+            if ($el.data("widget-autoloaded")) {
+                return;
+            }
+            $el.data("widget-autoloaded", true);
+
+            loadWidgetData($el).done(function (data) {
+                emit("widgets:autoloaded", { element: $el, data: data });
+            });
+        });
+    }
+
     function setRealtimeStatus(value) {
         state.realtime.status = value;
         document.querySelectorAll("[data-signalr-status]").forEach(function (node) {
@@ -1335,6 +1422,100 @@
         return deferred.promise();
     }
 
+    // ---- Server Command Processor ----
+    // JSON responses with a "commands" array get auto-processed.
+    // Supported: toast, redirect, reload, navigate, eval
+    function processCommands(commands) {
+        if (!commands || !Array.isArray(commands)) return;
+
+        var hasToast = false;
+        var deferredAction = null;
+        var overlayDuration = 0;
+
+        // First pass: execute immediate commands (toast, replace, remove, class changes)
+        commands.forEach(function (cmd) {
+            if (!cmd || !cmd.type) return;
+            switch (cmd.type) {
+                case "toast":
+                    if (window.FH && window.FH.toast) {
+                        window.FH.toast(cmd.message || "", cmd.variant || "success");
+                    } else {
+                        showToast(cmd.message || "", cmd.detail || "", {});
+                    }
+                    hasToast = true;
+                    break;
+                case "overlay":
+                    if (window.FH && window.FH.overlay) {
+                        var dur = cmd.duration || 2000;
+                        window.FH.overlay({
+                            variant: cmd.variant || "success",
+                            title: cmd.title || "",
+                            message: cmd.message || "",
+                            duration: dur
+                        });
+                        overlayDuration = dur;
+                    }
+                    hasToast = true;
+                    break;
+                case "redirect":
+                case "navigate":
+                case "reload":
+                    // Defer navigation — show toast first
+                    if (!deferredAction) deferredAction = cmd;
+                    break;
+                case "replace":
+                    if (cmd.selector && cmd.html != null) {
+                        var target = document.querySelector(cmd.selector);
+                        if (target) target.innerHTML = cmd.html;
+                    }
+                    break;
+                case "remove":
+                    if (cmd.selector) {
+                        var el = document.querySelector(cmd.selector);
+                        if (el) el.remove();
+                    }
+                    break;
+                case "addClass":
+                    if (cmd.selector && cmd.className) {
+                        var el2 = document.querySelector(cmd.selector);
+                        if (el2) el2.classList.add(cmd.className);
+                    }
+                    break;
+                case "removeClass":
+                    if (cmd.selector && cmd.className) {
+                        var el3 = document.querySelector(cmd.selector);
+                        if (el3) el3.classList.remove(cmd.className);
+                    }
+                    break;
+            }
+        });
+
+        // Second pass: execute deferred navigation after toast is visible
+        if (deferredAction) {
+            var delay = overlayDuration > 0 ? overlayDuration : (hasToast ? 1500 : 0);
+            setTimeout(function () {
+                switch (deferredAction.type) {
+                    case "redirect":
+                        if (deferredAction.url) window.location.href = deferredAction.url;
+                        break;
+                    case "navigate":
+                        if (deferredAction.url) navigate(deferredAction.url);
+                        break;
+                    case "reload":
+                        window.location.reload();
+                        break;
+                }
+            }, delay);
+        }
+    }
+
+    // Auto-process commands from form submissions
+    on("forms:submit-complete", function (data) {
+        if (data && data.response && typeof data.response === "object" && data.response.commands) {
+            processCommands(data.response.commands);
+        }
+    });
+
     window.WebLogicClient = {
         configure: configure,
         on: on,
@@ -1349,6 +1530,7 @@
             applyMeta: applyMeta
         },
         widgets: {
+            bind: bindWidgets,
             emitChannel: emitWidgetChannel,
             render: renderWidgetHtml,
             refreshInstance: refreshWidgetInstance,
@@ -1375,7 +1557,8 @@
             setStatus: setRealtimeStatus
         },
         ui: {
-            toast: showToast
+            toast: showToast,
+            processCommands: processCommands
         },
         media: {},
         init: initialize

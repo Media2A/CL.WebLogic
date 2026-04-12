@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 using CL.Common.FileHandling;
@@ -9,6 +10,7 @@ using CL.StorageS3;
 using CL.WebLogic.Configuration;
 using CL.WebLogic.Routing;
 using CL.WebLogic.Runtime;
+using CL.WebLogic.Security;
 using CodeLogic;
 using CodeLogic.Framework.Libraries;
 using Microsoft.AspNetCore.StaticFiles;
@@ -45,13 +47,13 @@ public sealed partial class ThemeManager
         @"\{widgetarea:([^\}]+)\}",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private static readonly Regex IfRegex = new(
-        @"\{if:([^\}]+)\}(.*?)\{/if\}",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex IfOpenRegex = new(
+        @"\{if:([^\}]+)\}",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private static readonly Regex IfNotRegex = new(
-        @"\{ifnot:([^\}]+)\}(.*?)\{/ifnot\}",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex IfNotOpenRegex = new(
+        @"\{ifnot:([^\}]+)\}",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex LegacyAuthGroupBlockRegex = new(
         @"\{page:auth:requireaccessgroup:([^\}]+)\}(.*?)\{/page:auth\}",
@@ -86,6 +88,9 @@ public sealed partial class ThemeManager
     private readonly WebWidgetRegistry _widgets;
     private readonly IWebWidgetSettingsStore? _settingsStore;
     private readonly FileExtensionContentTypeProvider _contentTypes = new();
+    private readonly ConcurrentDictionary<string, CachedContent> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private FileSystemWatcher? _watcher;
+    private WebSecurityService? _security;
 
     public ThemeManager(LibraryContext context, WebLogicConfig config, WebWidgetRegistry widgets, IWebWidgetSettingsStore? settingsStore)
     {
@@ -94,6 +99,72 @@ public sealed partial class ThemeManager
         _widgets = widgets;
         _settingsStore = settingsStore;
     }
+
+    public void SetSecurityService(WebSecurityService security)
+    {
+        _security = security;
+    }
+
+    public void InitializeCaching(string themeRoot)
+    {
+        if (!_config.Theme.EnableCaching || _config.Storage.Mode != WebStorageMode.Local)
+            return;
+
+        if (!Directory.Exists(themeRoot))
+            return;
+
+        _watcher = new FileSystemWatcher(themeRoot)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size
+        };
+
+        _watcher.Changed += OnThemeFileChanged;
+        _watcher.Created += OnThemeFileChanged;
+        _watcher.Deleted += OnThemeFileChanged;
+        _watcher.Renamed += OnThemeFileRenamed;
+        _watcher.EnableRaisingEvents = true;
+
+        _context.Logger.Info($"Template caching enabled with file watcher on: {themeRoot}");
+    }
+
+    public void ClearCache()
+    {
+        _cache.Clear();
+    }
+
+    public void DisposeCaching()
+    {
+        _watcher?.Dispose();
+        _watcher = null;
+        _cache.Clear();
+    }
+
+    private void OnThemeFileChanged(object sender, FileSystemEventArgs e)
+    {
+        InvalidateCacheForPath(e.FullPath);
+    }
+
+    private void OnThemeFileRenamed(object sender, RenamedEventArgs e)
+    {
+        InvalidateCacheForPath(e.OldFullPath);
+        InvalidateCacheForPath(e.FullPath);
+    }
+
+    private void InvalidateCacheForPath(string fullPath)
+    {
+        var keysToRemove = _cache.Keys
+            .Where(key => fullPath.EndsWith(key.Replace('/', Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        foreach (var key in keysToRemove)
+            _cache.TryRemove(key, out _);
+
+        if (keysToRemove.Length > 0)
+            _context.Logger.Debug($"Template cache invalidated: {string.Join(", ", keysToRemove)}");
+    }
+
+    private sealed record CachedContent(byte[] Bytes, DateTime CachedAtUtc);
 
     public async Task<string> ResolveThemeRootAsync()
     {
@@ -204,7 +275,7 @@ public sealed partial class ThemeManager
         return builder.ToString();
     }
 
-    public async Task<WebResult?> TryReadAssetAsync(string requestPath, string? themeRoot)
+    public async Task<WebResult?> TryReadAssetAsync(string requestPath, string? themeRoot, string? ifNoneMatch = null, string? ifModifiedSince = null)
     {
         var normalized = requestPath.TrimStart('/');
         if (string.IsNullOrWhiteSpace(normalized))
@@ -217,8 +288,74 @@ public sealed partial class ThemeManager
         if (!_contentTypes.TryGetContentType(normalized, out var contentType))
             contentType = "application/octet-stream";
 
-        return WebResult.Bytes(bytes, contentType);
+        var etag = ComputeETag(bytes);
+        var lastModified = GetFileLastModified(normalized, themeRoot);
+        var headers = BuildAssetCacheHeaders(etag, lastModified, normalized);
+
+        if (!string.IsNullOrWhiteSpace(ifNoneMatch) && string.Equals(ifNoneMatch.Trim('"'), etag.Trim('"'), StringComparison.Ordinal))
+        {
+            return new WebResult
+            {
+                StatusCode = 304,
+                ContentType = contentType,
+                Headers = headers
+            };
+        }
+
+        if (lastModified.HasValue && !string.IsNullOrWhiteSpace(ifModifiedSince)
+            && DateTimeOffset.TryParse(ifModifiedSince, out var since)
+            && lastModified.Value <= since)
+        {
+            return new WebResult
+            {
+                StatusCode = 304,
+                ContentType = contentType,
+                Headers = headers
+            };
+        }
+
+        return new WebResult
+        {
+            StatusCode = 200,
+            ContentType = contentType,
+            BinaryBody = bytes,
+            Headers = headers
+        };
     }
+
+    private static string ComputeETag(byte[] content)
+    {
+        var hash = System.Security.Cryptography.SHA256.HashData(content);
+        return $"\"{Convert.ToHexString(hash[..8]).ToLowerInvariant()}\"";
+    }
+
+    private DateTimeOffset? GetFileLastModified(string relativePath, string? themeRoot)
+    {
+        if (_config.Storage.Mode != WebStorageMode.Local || string.IsNullOrWhiteSpace(themeRoot))
+            return null;
+
+        var fullPath = Path.Combine(themeRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        return File.Exists(fullPath) ? new DateTimeOffset(File.GetLastWriteTimeUtc(fullPath), TimeSpan.Zero) : null;
+    }
+
+    private static Dictionary<string, string> BuildAssetCacheHeaders(string etag, DateTimeOffset? lastModified, string path)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ETag"] = etag,
+            ["Cache-Control"] = IsImmutableAsset(path) ? "public, max-age=31536000, immutable" : "public, max-age=3600",
+            ["Vary"] = "Accept-Encoding"
+        };
+
+        if (lastModified.HasValue)
+            headers["Last-Modified"] = lastModified.Value.ToString("R");
+
+        return headers;
+    }
+
+    private static bool IsImmutableAsset(string path) =>
+        path.Contains("/vendor/", StringComparison.OrdinalIgnoreCase) ||
+        path.Contains(".min.", StringComparison.OrdinalIgnoreCase);
 
     private async Task<string> EnsureGitThemeAsync()
     {
@@ -291,9 +428,19 @@ public sealed partial class ThemeManager
         if (string.IsNullOrWhiteSpace(themeRoot))
             return null;
 
+        if (_config.Theme.EnableCaching && _cache.TryGetValue(relativePath, out var cached))
+            return cached.Bytes;
+
         var fullPath = Path.Combine(themeRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
         var result = await FileSystem.ReadAllBytesAsync(fullPath).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value : null;
+
+        if (!result.IsSuccess || result.Value is null)
+            return null;
+
+        if (_config.Theme.EnableCaching)
+            _cache[relativePath] = new CachedContent(result.Value, DateTime.UtcNow);
+
+        return result.Value;
     }
 
     private async Task<byte[]?> ReadBytesFromS3Async(string relativePath)
@@ -361,6 +508,7 @@ public sealed partial class ThemeManager
         var html = template;
         html = RenderHeadRegex.Replace(html, WebPageHeadRenderer.Render(context.Meta, context.Model));
         html = html.Replace("{renderbody}", context.RenderBody ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        html = ReplaceCsrfTokens(html, context);
         html = RenderSectionRegex.Replace(html, match =>
             context.Sections.TryGetValue(match.Groups[1].Value.Trim(), out var value) ? value : string.Empty);
 
@@ -396,15 +544,8 @@ public sealed partial class ThemeManager
             return builder.ToString();
         }).ConfigureAwait(false);
 
-        html = await ReplaceMatchesAsync(html, IfRegex, async match =>
-            await EvaluateConditionAsync(match.Groups[1].Value.Trim(), context).ConfigureAwait(false)
-                ? await RenderFragmentAsync(match.Groups[2].Value, context).ConfigureAwait(false)
-                : string.Empty).ConfigureAwait(false);
-
-        html = await ReplaceMatchesAsync(html, IfNotRegex, async match =>
-            !await EvaluateConditionAsync(match.Groups[1].Value.Trim(), context).ConfigureAwait(false)
-                ? await RenderFragmentAsync(match.Groups[2].Value, context).ConfigureAwait(false)
-                : string.Empty).ConfigureAwait(false);
+        html = await ProcessConditionalBlocksAsync(html, "if", false, context).ConfigureAwait(false);
+        html = await ProcessConditionalBlocksAsync(html, "ifnot", true, context).ConfigureAwait(false);
 
         html = await ReplaceMatchesAsync(html, WidgetRegex, async match =>
         {
@@ -465,14 +606,16 @@ public sealed partial class ThemeManager
 
         html = await ReplaceMatchesAsync(html, RawTokenRegex, async match =>
         {
-            var value = await ResolveSelectorValueAsync(match.Groups[1].Value.Trim(), context).ConfigureAwait(false);
-            return FormatValue(value, encode: false);
+            var (value, filters) = ParseFilters(match.Groups[1].Value.Trim());
+            var resolved = await ResolveSelectorValueAsync(value, context).ConfigureAwait(false);
+            return FormatValue(ApplyFilters(resolved, filters), encode: false);
         }).ConfigureAwait(false);
 
         html = await ReplaceMatchesAsync(html, TokenRegex, async match =>
         {
-            var value = await ResolveSelectorValueAsync(match.Groups[1].Value.Trim(), context).ConfigureAwait(false);
-            return FormatValue(value, encode: true);
+            var (value, filters) = ParseFilters(match.Groups[1].Value.Trim());
+            var resolved = await ResolveSelectorValueAsync(value, context).ConfigureAwait(false);
+            return FormatValue(ApplyFilters(resolved, filters), encode: true);
         }).ConfigureAwait(false);
 
         html = LegacyModelTokenRegex.Replace(html, match =>
@@ -492,6 +635,71 @@ public sealed partial class ThemeManager
         return html;
     }
 
+    private async Task<string> ProcessConditionalBlocksAsync(string html, string tag, bool negate, TemplateRenderContext context)
+    {
+        var openTag = $"{{{tag}:";
+        var closeTag = $"{{/{tag}}}";
+        var result = html;
+
+        while (true)
+        {
+            var openIndex = result.IndexOf(openTag, StringComparison.OrdinalIgnoreCase);
+            if (openIndex < 0)
+                break;
+
+            var tagEnd = result.IndexOf('}', openIndex + openTag.Length);
+            if (tagEnd < 0)
+                break;
+
+            var expression = result[(openIndex + openTag.Length)..tagEnd].Trim();
+
+            var depth = 1;
+            var searchFrom = tagEnd + 1;
+            var closeIndex = -1;
+
+            while (depth > 0 && searchFrom < result.Length)
+            {
+                var nextOpen = result.IndexOf(openTag, searchFrom, StringComparison.OrdinalIgnoreCase);
+                var nextClose = result.IndexOf(closeTag, searchFrom, StringComparison.OrdinalIgnoreCase);
+
+                if (nextClose < 0)
+                    break;
+
+                if (nextOpen >= 0 && nextOpen < nextClose)
+                {
+                    depth++;
+                    searchFrom = nextOpen + openTag.Length;
+                }
+                else
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        closeIndex = nextClose;
+                    }
+                    else
+                    {
+                        searchFrom = nextClose + closeTag.Length;
+                    }
+                }
+            }
+
+            if (closeIndex < 0)
+                break;
+
+            var innerContent = result[(tagEnd + 1)..closeIndex];
+            var condition = await EvaluateConditionAsync(expression, context).ConfigureAwait(false);
+            var show = negate ? !condition : condition;
+            var replacement = show
+                ? await RenderFragmentAsync(innerContent, context).ConfigureAwait(false)
+                : string.Empty;
+
+            result = string.Concat(result.AsSpan(0, openIndex), replacement, result.AsSpan(closeIndex + closeTag.Length));
+        }
+
+        return result;
+    }
+
     private async Task<bool> EvaluateConditionAsync(string expression, TemplateRenderContext context)
     {
         if (string.Equals(expression, "auth", StringComparison.OrdinalIgnoreCase))
@@ -499,6 +707,9 @@ public sealed partial class ThemeManager
 
         if (expression.StartsWith("accessgroup:", StringComparison.OrdinalIgnoreCase))
             return context.PageContext?.HasAnyAccessGroup(SplitValues(expression["accessgroup:".Length..])) == true;
+
+        if (expression.StartsWith("permission:", StringComparison.OrdinalIgnoreCase))
+            return context.PageContext?.HasPermission(expression["permission:".Length..].Trim()) == true;
 
         return IsTruthy(await ResolveSelectorValueAsync(expression, context).ConfigureAwait(false));
     }
@@ -621,6 +832,164 @@ public sealed partial class ThemeManager
         }
 
         return current;
+    }
+
+    private string ReplaceCsrfTokens(string html, TemplateRenderContext context)
+    {
+        if (!html.Contains("{csrf", StringComparison.OrdinalIgnoreCase))
+            return html;
+
+        var token = string.Empty;
+        if (context.PageContext is not null && _security is not null)
+        {
+            token = _security.GetOrCreateCsrfToken(context.PageContext.HttpContext);
+        }
+
+        html = html.Replace("{csrf}", $"<input type=\"hidden\" name=\"_csrf\" value=\"{CL.Common.Web.HtmlHelper.Encode(token)}\">", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("{csrf_token}", CL.Common.Web.HtmlHelper.Encode(token), StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("{csrf_meta}", $"<meta name=\"csrf-token\" content=\"{CL.Common.Web.HtmlHelper.Encode(token)}\">", StringComparison.OrdinalIgnoreCase);
+
+        return html;
+    }
+
+    private static (string Selector, (string Name, string? Arg)[] Filters) ParseFilters(string expression)
+    {
+        var pipeIndex = expression.IndexOf('|');
+        if (pipeIndex < 0)
+            return (expression, []);
+
+        var selector = expression[..pipeIndex].Trim();
+        var filterPart = expression[(pipeIndex + 1)..];
+        var filters = new List<(string Name, string? Arg)>();
+
+        foreach (var raw in SplitFilterChain(filterPart))
+        {
+            var trimmed = raw.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                continue;
+
+            var colonIndex = trimmed.IndexOf(':');
+            if (colonIndex < 0)
+            {
+                filters.Add((trimmed, null));
+            }
+            else
+            {
+                var name = trimmed[..colonIndex].Trim();
+                var arg = trimmed[(colonIndex + 1)..].Trim().Trim('"').Trim('\'');
+                filters.Add((name, arg));
+            }
+        }
+
+        return (selector, filters.ToArray());
+    }
+
+    private static IEnumerable<string> SplitFilterChain(string input)
+    {
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < input.Length; i++)
+        {
+            switch (input[i])
+            {
+                case '"' or '\'':
+                    depth = depth == 0 ? 1 : 0;
+                    break;
+                case '|' when depth == 0:
+                    yield return input[start..i];
+                    start = i + 1;
+                    break;
+            }
+        }
+
+        if (start < input.Length)
+            yield return input[start..];
+    }
+
+    private static object? ApplyFilters(object? value, (string Name, string? Arg)[] filters)
+    {
+        if (filters.Length == 0)
+            return value;
+
+        foreach (var (name, arg) in filters)
+        {
+            value = name.ToLowerInvariant() switch
+            {
+                "uppercase" or "upper" => value?.ToString()?.ToUpperInvariant(),
+                "lowercase" or "lower" => value?.ToString()?.ToLowerInvariant(),
+                "trim" => value?.ToString()?.Trim(),
+                "capitalize" => Capitalize(value?.ToString()),
+                "truncate" => Truncate(value?.ToString(), int.TryParse(arg, out var len) ? len : 100),
+                "replace" => ApplyReplace(value?.ToString(), arg),
+                "default" => string.IsNullOrWhiteSpace(value?.ToString()) ? arg : value,
+                "prefix" => value is null || string.IsNullOrEmpty(value.ToString()) ? value : $"{arg}{value}",
+                "suffix" => value is null || string.IsNullOrEmpty(value.ToString()) ? value : $"{value}{arg}",
+                "format" => ApplyFormat(value, arg),
+                "length" or "count" => value?.ToString()?.Length ?? 0,
+                "reverse" => value is string s ? new string(s.Reverse().ToArray()) : value,
+                "wordcount" => value?.ToString()?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length ?? 0,
+                "nl2br" => value?.ToString()?.Replace("\n", "<br>", StringComparison.Ordinal),
+                "urlencode" => Uri.EscapeDataString(value?.ToString() ?? string.Empty),
+                "slug" => Slugify(value?.ToString()),
+                _ => value
+            };
+        }
+
+        return value;
+    }
+
+    private static string? Capitalize(string? text) =>
+        string.IsNullOrEmpty(text) ? text : char.ToUpperInvariant(text[0]) + text[1..];
+
+    private static string? Truncate(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+
+        return text[..maxLength].TrimEnd() + "...";
+    }
+
+    private static string? ApplyReplace(string? text, string? arg)
+    {
+        if (text is null || string.IsNullOrEmpty(arg))
+            return text;
+
+        var parts = arg.Split("→", 2, StringSplitOptions.None);
+        if (parts.Length < 2)
+            parts = arg.Split("->", 2, StringSplitOptions.None);
+
+        return parts.Length == 2
+            ? text.Replace(parts[0], parts[1], StringComparison.Ordinal)
+            : text;
+    }
+
+    private static object? ApplyFormat(object? value, string? format)
+    {
+        if (value is null || string.IsNullOrWhiteSpace(format))
+            return value;
+
+        return value switch
+        {
+            DateTime dt => dt.ToString(format),
+            DateTimeOffset dto => dto.ToString(format),
+            DateOnly d => d.ToString(format),
+            int i => i.ToString(format),
+            long l => l.ToString(format),
+            double d => d.ToString(format),
+            decimal d => d.ToString(format),
+            _ => value
+        };
+    }
+
+    private static string? Slugify(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+
+        var slug = text.ToLowerInvariant().Trim();
+        slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[^a-z0-9\s-]", "");
+        slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[\s-]+", "-");
+        return slug.Trim('-');
     }
 
     private static string FormatValue(object? value, bool encode)

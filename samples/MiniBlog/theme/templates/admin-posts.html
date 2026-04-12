@@ -1,0 +1,17 @@
+{layout:layouts/main}
+
+<section class="admin-card admin-card--wide">
+    <div class="section-heading">
+        <h3>All posts</h3>
+        <a class="btn btn-ink" href="/admin/posts/new">New post</a>
+    </div>
+    <div class="admin-table">
+        {foreach:model:posts}
+            <a class="admin-table__row" href="/admin/posts/edit/{item:Id}">
+                <span>{item:Title}</span>
+                <span>{item:AuthorDisplayName}</span>
+                <span class="status-pill">{item:Status}</span>
+            </a>
+        {/foreach}
+    </div>
+</section>

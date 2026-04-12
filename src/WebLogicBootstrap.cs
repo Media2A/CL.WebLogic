@@ -1,6 +1,5 @@
 using CL.Common;
 using CL.GitHelper;
-using CL.MySQL2;
 using CL.NetUtils;
 using CL.StorageS3;
 using CodeLogic;
@@ -15,7 +14,6 @@ public static class WebLogicBootstrap
             IncludeCommon = includeOptionalInfrastructure,
             IncludeGitHelper = includeOptionalInfrastructure,
             IncludeStorageS3 = includeOptionalInfrastructure,
-            IncludeMySql = includeOptionalInfrastructure,
             IncludeNetUtils = includeOptionalInfrastructure
         });
 
@@ -30,9 +28,6 @@ public static class WebLogicBootstrap
         if (options.IncludeStorageS3)
             await Libraries.LoadAsync<StorageS3Library>().ConfigureAwait(false);
 
-        if (options.IncludeMySql)
-            await Libraries.LoadAsync<MySQL2Library>().ConfigureAwait(false);
-
         if (options.IncludeNetUtils)
             await Libraries.LoadAsync<NetUtilsLibrary>().ConfigureAwait(false);
 
@@ -45,6 +40,5 @@ public sealed class WebLogicBootstrapOptions
     public bool IncludeCommon { get; set; }
     public bool IncludeGitHelper { get; set; }
     public bool IncludeStorageS3 { get; set; }
-    public bool IncludeMySql { get; set; }
     public bool IncludeNetUtils { get; set; }
 }

@@ -1,0 +1,16 @@
+{layout:layouts/main}
+
+<section class="listing-shell">
+    {foreach:model:posts}
+        <article class="listing-card">
+            <div>
+                <p class="post-card__meta">{item:AuthorDisplayName}</p>
+                <h3><a href="/posts/{item:Slug}">{item:Title}</a></h3>
+                <p>{item:Summary}</p>
+            </div>
+            <a class="btn btn-outline-dark" href="/posts/{item:Slug}">Open</a>
+        </article>
+    {/foreach}
+</section>
+
+{raw:model:posts_pager_html}

@@ -1,0 +1,408 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CL.StorageS3</name>
+    </assembly>
+    <members>
+        <member name="T:CL.StorageS3.Events.ObjectUploadedEvent">
+            <summary>
+            Published when an object has been successfully uploaded to S3.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Events.ObjectUploadedEvent.#ctor(System.String,System.String,System.String,System.Int64,System.DateTime)">
+            <summary>
+            Published when an object has been successfully uploaded to S3.
+            </summary>
+        </member>
+        <member name="T:CL.StorageS3.Events.ObjectDeletedEvent">
+            <summary>
+            Published when an object has been successfully deleted from S3.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Events.ObjectDeletedEvent.#ctor(System.String,System.String,System.String,System.DateTime)">
+            <summary>
+            Published when an object has been successfully deleted from S3.
+            </summary>
+        </member>
+        <member name="T:CL.StorageS3.Events.BucketCreatedEvent">
+            <summary>
+            Published when a new bucket has been successfully created.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Events.BucketCreatedEvent.#ctor(System.String,System.String,System.DateTime)">
+            <summary>
+            Published when a new bucket has been successfully created.
+            </summary>
+        </member>
+        <member name="T:CL.StorageS3.Models.StorageS3Config">
+            <summary>
+            Main configuration model for the CL.StorageS3 library.
+            Serialized as <c>config.storages3.json</c> in the library's config directory.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.StorageS3Config.Enabled">
+            <summary>Whether the StorageS3 library is enabled.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.StorageS3Config.Connections">
+            <summary>One or more S3/MinIO connection configurations.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.StorageS3Config.Validate">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.StorageS3.Models.S3ConnectionConfig">
+            <summary>
+            Configuration for a single S3 or S3-compatible (MinIO, etc.) connection.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.ConnectionId">
+            <summary>Unique identifier for this connection. Used to look it up via the connection manager.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.AccessKey">
+            <summary>AWS / MinIO access key ID.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.SecretKey">
+            <summary>AWS / MinIO secret access key.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.ServiceUrl">
+            <summary>
+            S3 service endpoint URL.
+            Use <c>https://s3.amazonaws.com</c> for AWS or a MinIO URL such as <c>http://localhost:9000</c>.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.PublicUrl">
+            <summary>
+            Public-facing base URL used to build object URLs, e.g. <c>https://cdn.example.com</c>.
+            When empty, object public URLs are not generated.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.Region">
+            <summary>AWS region name (e.g. <c>us-east-1</c>). Defaults to <c>us-east-1</c>.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.DefaultBucket">
+            <summary>Default bucket name used when no bucket is specified in an operation.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.ForcePathStyle">
+            <summary>
+            Whether to use path-style addressing (<c>http://host/bucket/key</c> instead of <c>http://bucket.host/key</c>).
+            Required for MinIO and most non-AWS S3-compatible services.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.UseHttps">
+            <summary>Whether to use HTTPS for the connection.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.TimeoutSeconds">
+            <summary>HTTP request timeout in seconds.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ConnectionConfig.MaxRetries">
+            <summary>Maximum number of retry attempts on transient failures.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.S3ConnectionConfig.BuildClient">
+            <summary>
+            Builds and returns a configured <see cref="T:Amazon.S3.AmazonS3Client"/> for this connection.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.S3ConnectionConfig.IsValid">
+            <summary>
+            Returns <see langword="true"/> when all required fields have values.
+            </summary>
+        </member>
+        <member name="T:CL.StorageS3.Models.S3ObjectInfo">
+            <summary>
+            Represents metadata and identity information about an S3 object.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.Key">
+            <summary>The object key (path within the bucket).</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.BucketName">
+            <summary>The bucket containing this object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.Size">
+            <summary>Size of the object in bytes.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.LastModified">
+            <summary>UTC timestamp of when the object was last modified.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.ETag">
+            <summary>Entity tag (MD5 hash or multipart identifier) of the object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.StorageClass">
+            <summary>S3 storage class (e.g. STANDARD, INTELLIGENT_TIERING).</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.ContentType">
+            <summary>MIME content type of the object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.Metadata">
+            <summary>User-defined metadata key/value pairs attached to the object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.S3ObjectInfo.PublicUrl">
+            <summary>Public-facing URL for this object (when configured via <c>PublicUrl</c>).</summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.S3ObjectInfo.FromS3Object(Amazon.S3.Model.S3Object)">
+            <summary>
+            Creates an <see cref="T:CL.StorageS3.Models.S3ObjectInfo"/> from an <see cref="T:Amazon.S3.Model.S3Object"/> returned by list operations.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.S3ObjectInfo.FromMetadata(System.String,System.String,Amazon.S3.Model.GetObjectMetadataResponse)">
+            <summary>
+            Creates an <see cref="T:CL.StorageS3.Models.S3ObjectInfo"/> from a <see cref="T:Amazon.S3.Model.GetObjectMetadataResponse"/>.
+            </summary>
+        </member>
+        <member name="T:CL.StorageS3.Models.BucketInfo">
+            <summary>
+            Represents information about an S3 bucket.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.BucketInfo.Name">
+            <summary>Bucket name.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.BucketInfo.CreationDate">
+            <summary>UTC timestamp when the bucket was created.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.BucketInfo.Region">
+            <summary>AWS region the bucket resides in (may be empty for non-AWS providers).</summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.BucketInfo.FromS3Bucket(Amazon.S3.Model.S3Bucket)">
+            <summary>
+            Creates a <see cref="T:CL.StorageS3.Models.BucketInfo"/> from an <see cref="T:Amazon.S3.Model.S3Bucket"/> descriptor.
+            </summary>
+        </member>
+        <member name="T:CL.StorageS3.Models.ListObjectsResult">
+            <summary>
+            Result of a paginated list-objects operation.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.ListObjectsResult.Objects">
+            <summary>Objects returned in this page.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.ListObjectsResult.NextContinuationToken">
+            <summary>Continuation token to pass to retrieve the next page, or <see langword="null"/> when exhausted.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.ListObjectsResult.IsTruncated">
+            <summary>Whether more results exist beyond this page.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.ListObjectsResult.CommonPrefixes">
+            <summary>Common key prefixes returned when a delimiter is specified (virtual folders).</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.ListObjectsResult.Count">
+            <summary>Number of objects in <see cref="P:CL.StorageS3.Models.ListObjectsResult.Objects"/>.</summary>
+        </member>
+        <member name="T:CL.StorageS3.Models.UploadOptions">
+            <summary>
+            Options that control how an object is uploaded to S3.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.UploadOptions.ContentType">
+            <summary>MIME content type (e.g. <c>image/jpeg</c>). Leave empty to omit.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.UploadOptions.Metadata">
+            <summary>User-defined metadata key/value pairs to attach to the object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.UploadOptions.StorageClass">
+            <summary>S3 storage class (e.g. STANDARD, REDUCED_REDUNDANCY). Leave empty for default.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.UploadOptions.CacheControl">
+            <summary>HTTP Cache-Control header value. Leave empty to omit.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.UploadOptions.ContentDisposition">
+            <summary>HTTP Content-Disposition header value. Leave empty to omit.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.UploadOptions.MakePublic">
+            <summary>Whether to set the object ACL to public-read.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.UploadOptions.Default">
+            <summary>Returns a default <see cref="T:CL.StorageS3.Models.UploadOptions"/> with no overrides.</summary>
+        </member>
+        <member name="T:CL.StorageS3.Models.DownloadOptions">
+            <summary>
+            Options that control how an object is downloaded from S3.
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.DownloadOptions.RangeStart">
+            <summary>Byte offset at which to start the download (for range requests). Null means start of object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.DownloadOptions.RangeEnd">
+            <summary>Byte offset at which to end the download (inclusive, for range requests). Null means end of object.</summary>
+        </member>
+        <member name="P:CL.StorageS3.Models.DownloadOptions.VersionId">
+            <summary>Version ID to retrieve a specific object version. Null retrieves the current version.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Models.DownloadOptions.Default">
+            <summary>Returns a default <see cref="T:CL.StorageS3.Models.DownloadOptions"/> with no overrides.</summary>
+        </member>
+        <member name="T:CL.StorageS3.Services.S3ConnectionManager">
+            <summary>
+            Manages a cache of <see cref="T:Amazon.S3.AmazonS3Client"/> instances keyed by connection ID.
+            Thread-safe via a simple lock.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.#ctor(CodeLogic.Core.Logging.ILogger)">
+            <summary>
+            Initializes a new <see cref="T:CL.StorageS3.Services.S3ConnectionManager"/>.
+            </summary>
+            <param name="logger">Optional logger.</param>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.RegisterConfiguration(CL.StorageS3.Models.S3ConnectionConfig)">
+            <summary>
+            Registers a connection configuration. Replaces any existing config with the same <see cref="P:CL.StorageS3.Models.S3ConnectionConfig.ConnectionId"/>.
+            </summary>
+            <param name="config">Connection configuration to register.</param>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.GetClient(System.String)">
+            <summary>
+            Returns a cached (or newly created) <see cref="T:Amazon.S3.AmazonS3Client"/> for the given connection ID.
+            </summary>
+            <param name="connectionId">Connection ID to look up. Defaults to <c>"Default"</c>.</param>
+            <exception cref="T:System.InvalidOperationException">Thrown when no configuration is registered for the given ID.</exception>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.TestConnectionAsync(System.String)">
+            <summary>
+            Tests whether the connection identified by <paramref name="connectionId"/> is reachable
+            by performing a lightweight <c>ListBuckets</c> call.
+            </summary>
+            <param name="connectionId">Connection ID to test. Defaults to <c>"Default"</c>.</param>
+            <returns><see langword="true"/> when the call succeeds; <see langword="false"/> on error.</returns>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.GetConfiguration(System.String)">
+            <summary>
+            Returns the <see cref="T:CL.StorageS3.Models.S3ConnectionConfig"/> registered under <paramref name="connectionId"/>,
+            or <see langword="null"/> when not found.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.GetConnectionIds">
+            <summary>
+            Returns all registered connection IDs.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3ConnectionManager.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:CL.StorageS3.Services.S3StorageService">
+            <summary>
+            High-level S3 storage service providing full CRUD operations over buckets and objects.
+            All methods return <see cref="T:CodeLogic.Core.Results.Result`1"/> or <see cref="T:CodeLogic.Core.Results.Result"/> — exceptions are caught and wrapped.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.#ctor(CL.StorageS3.Services.S3ConnectionManager,System.String,CodeLogic.Core.Logging.ILogger,CodeLogic.Core.Events.IEventBus)">
+            <summary>
+            Initializes a new <see cref="T:CL.StorageS3.Services.S3StorageService"/>.
+            </summary>
+            <param name="connectionManager">The connection manager that owns the underlying client.</param>
+            <param name="connectionId">Connection ID to use. Defaults to <c>"Default"</c>.</param>
+            <param name="logger">Optional logger.</param>
+            <param name="events">Optional event bus for publishing domain events.</param>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.CreateBucketAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Creates a new bucket.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.DeleteBucketAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Deletes a bucket.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.ListBucketsAsync(System.Threading.CancellationToken)">
+            <summary>Lists all buckets accessible to this connection.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.BucketExistsAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns <see langword="true"/> when <paramref name="bucketName"/> exists and is accessible.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.PutObjectAsync(System.String,System.String,System.Byte[],CL.StorageS3.Models.UploadOptions,System.Threading.CancellationToken)">
+            <summary>Uploads a byte array as an S3 object.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.PutObjectAsync(System.String,System.String,System.IO.Stream,CL.StorageS3.Models.UploadOptions,System.Threading.CancellationToken)">
+            <summary>Uploads a stream as an S3 object.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.GetObjectAsync(System.String,System.String,CL.StorageS3.Models.DownloadOptions,System.Threading.CancellationToken)">
+            <summary>Downloads an S3 object as a byte array.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.GetObjectStreamAsync(System.String,System.String,CL.StorageS3.Models.DownloadOptions,System.Threading.CancellationToken)">
+            <summary>Downloads an S3 object and returns its response stream.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.GetObjectInfoAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Retrieves metadata for an S3 object without downloading its content.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.DeleteObjectAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Deletes an S3 object.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.ListObjectsAsync(System.String,System.String,System.String,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Lists objects in a bucket with optional prefix filtering and pagination.
+            </summary>
+            <param name="bucket">Target bucket name.</param>
+            <param name="prefix">Optional key prefix filter.</param>
+            <param name="continuationToken">Pagination token from a previous call.</param>
+            <param name="maxKeys">Maximum number of objects to return per page.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.ObjectExistsAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns <see langword="true"/> when the object identified by <paramref name="key"/> exists in <paramref name="bucket"/>.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.CopyObjectAsync(System.String,System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Copies an object within or across buckets.</summary>
+        </member>
+        <member name="M:CL.StorageS3.Services.S3StorageService.GeneratePresignedUrlAsync(System.String,System.String,System.TimeSpan,System.Threading.CancellationToken)">
+            <summary>Generates a pre-signed URL that allows temporary access to a private object.</summary>
+            <param name="bucket">Bucket containing the object.</param>
+            <param name="key">Object key.</param>
+            <param name="expiry">How long the URL should remain valid.</param>
+            <param name="ct">Cancellation token (not used by AWS SDK for pre-sign, provided for API consistency).</param>
+        </member>
+        <member name="T:CL.StorageS3.StorageS3Library">
+            <summary>
+            <b>CL.StorageS3</b> — CodeLogic library providing Amazon S3 and S3-compatible (MinIO, etc.)
+            object storage operations.
+            <para>
+            Lifecycle:
+            <list type="number">
+              <item><description><b>Configure</b> — registers <see cref="T:CL.StorageS3.Models.StorageS3Config"/>.</description></item>
+              <item><description><b>Initialize</b> — loads and validates config, registers all enabled connections in <see cref="P:CL.StorageS3.StorageS3Library.ConnectionManager"/>.</description></item>
+              <item><description><b>Start</b> — no-op.</description></item>
+              <item><description><b>Stop</b> — disposes <see cref="P:CL.StorageS3.StorageS3Library.ConnectionManager"/> and all cached S3 clients.</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.StorageS3.StorageS3Library.Manifest">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.OnConfigureAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.OnInitializeAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.OnStartAsync(CodeLogic.Framework.Libraries.LibraryContext)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.OnStopAsync">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.HealthCheckAsync">
+            <inheritdoc/>
+        </member>
+        <member name="P:CL.StorageS3.StorageS3Library.ConnectionManager">
+            <summary>
+            The underlying connection manager. Use this for low-level client access.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown when the library has not been initialized or is disabled.
+            </exception>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.GetService(System.String)">
+            <summary>
+            Returns a new <see cref="T:CL.StorageS3.Services.S3StorageService"/> scoped to the given connection.
+            </summary>
+            <param name="connectionId">Connection ID to use. Defaults to <c>"Default"</c>.</param>
+        </member>
+        <member name="P:CL.StorageS3.StorageS3Library.DefaultService">
+            <summary>
+            Returns a new <see cref="T:CL.StorageS3.Services.S3StorageService"/> scoped to the <c>"Default"</c> connection.
+            </summary>
+        </member>
+        <member name="M:CL.StorageS3.StorageS3Library.Dispose">
+            <inheritdoc/>
+        </member>
+    </members>
+</doc>

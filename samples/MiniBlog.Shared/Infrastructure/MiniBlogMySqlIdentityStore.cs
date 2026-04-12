@@ -1,49 +1,49 @@
+using System.Security.Cryptography;
+using System.Text;
 using CL.MySQL2;
 using CL.MySQL2.Models;
-using CL.WebLogic.Configuration;
 using CL.WebLogic.Security;
 using CodeLogic;
 using CodeLogic.Framework.Libraries;
-using System.Security.Cryptography;
-using System.Text;
 
-namespace CL.WebLogic.MySql;
+namespace MiniBlog.Shared.Infrastructure;
 
-public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialValidator
+public sealed class MiniBlogMySqlIdentityStoreOptions
 {
-    private readonly LibraryContext _context;
-    private readonly WebLogicConfig _config;
+    public string ConnectionId { get; init; } = "Default";
+    public bool SyncTablesOnStart { get; init; } = true;
+}
+
+public sealed class MiniBlogMySqlIdentityStore : IWebIdentityStore, IWebCredentialValidator
+{
+    private readonly MiniBlogMySqlIdentityStoreOptions _options;
     private MySQL2Library? _mysql;
 
-    public WebMySqlIdentityStore(LibraryContext context, WebLogicConfig config)
+    public MiniBlogMySqlIdentityStore(MiniBlogMySqlIdentityStoreOptions options)
     {
-        _context = context;
-        _config = config;
+        _options = options;
     }
 
     public async Task InitializeAsync()
     {
         _mysql = Libraries.Get<MySQL2Library>();
-        if (_mysql is null || !_config.Auth.MySql.Enabled)
+        if (_mysql is null)
             return;
 
-        if (_config.Auth.MySql.SyncTablesOnStart)
+        if (_options.SyncTablesOnStart)
         {
-            await _mysql.SyncTableAsync<WebAuthUserRecord>(connectionId: _config.Auth.MySql.ConnectionId).ConfigureAwait(false);
-            await _mysql.SyncTableAsync<WebAuthAccessGroupRecord>(connectionId: _config.Auth.MySql.ConnectionId).ConfigureAwait(false);
-            await _mysql.SyncTableAsync<WebAuthUserAccessGroupRecord>(connectionId: _config.Auth.MySql.ConnectionId).ConfigureAwait(false);
+            await _mysql.SyncTableAsync<MiniBlogAuthUserRecord>(connectionId: _options.ConnectionId).ConfigureAwait(false);
+            await _mysql.SyncTableAsync<MiniBlogAuthAccessGroupRecord>(connectionId: _options.ConnectionId).ConfigureAwait(false);
+            await _mysql.SyncTableAsync<MiniBlogAuthUserAccessGroupRecord>(connectionId: _options.ConnectionId).ConfigureAwait(false);
         }
-
-        if (_config.Auth.MySql.SeedDemoRecords)
-            await SeedDemoRecordsAsync().ConfigureAwait(false);
     }
 
     public async Task<WebIdentityProfile?> GetIdentityAsync(string userId, CancellationToken cancellationToken = default)
     {
-        if (_mysql is null || !_config.Auth.MySql.Enabled || string.IsNullOrWhiteSpace(userId))
+        if (_mysql is null || string.IsNullOrWhiteSpace(userId))
             return null;
 
-        var users = _mysql.GetRepository<WebAuthUserRecord>(_config.Auth.MySql.ConnectionId);
+        var users = _mysql.GetRepository<MiniBlogAuthUserRecord>(_options.ConnectionId);
         var userResult = await users.GetByColumnAsync("user_id", userId, cancellationToken).ConfigureAwait(false);
         if (userResult.IsFailure || userResult.Value is null)
             return null;
@@ -52,7 +52,7 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
         if (user is null)
             return null;
 
-        var memberships = _mysql.GetRepository<WebAuthUserAccessGroupRecord>(_config.Auth.MySql.ConnectionId);
+        var memberships = _mysql.GetRepository<MiniBlogAuthUserAccessGroupRecord>(_options.ConnectionId);
         var membershipResult = await memberships.GetByColumnAsync("user_id", user.Id, cancellationToken).ConfigureAwait(false);
         var groupIds = membershipResult.IsSuccess && membershipResult.Value is not null
             ? membershipResult.Value.Select(static item => item.AccessGroupId).Distinct().ToArray()
@@ -61,7 +61,7 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
         var groups = new List<string>();
         if (groupIds.Length > 0)
         {
-            var groupRepo = _mysql.GetRepository<WebAuthAccessGroupRecord>(_config.Auth.MySql.ConnectionId);
+            var groupRepo = _mysql.GetRepository<MiniBlogAuthAccessGroupRecord>(_options.ConnectionId);
             foreach (var groupId in groupIds)
             {
                 var groupResult = await groupRepo.GetByIdAsync(groupId, cancellationToken).ConfigureAwait(false);
@@ -84,10 +84,10 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
         string password,
         CancellationToken cancellationToken = default)
     {
-        if (_mysql is null || !_config.Auth.MySql.Enabled || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(password))
+        if (_mysql is null || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(password))
             return null;
 
-        var users = _mysql.GetRepository<WebAuthUserRecord>(_config.Auth.MySql.ConnectionId);
+        var users = _mysql.GetRepository<MiniBlogAuthUserRecord>(_options.ConnectionId);
         var userResult = await users.GetByColumnAsync("user_id", userId.Trim(), cancellationToken).ConfigureAwait(false);
         if (userResult.IsFailure || userResult.Value is null)
             return null;
@@ -110,9 +110,9 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
         if (_mysql is null)
             return;
 
-        var userRepo = _mysql.GetRepository<WebAuthUserRecord>(_config.Auth.MySql.ConnectionId);
-        var groupRepo = _mysql.GetRepository<WebAuthAccessGroupRecord>(_config.Auth.MySql.ConnectionId);
-        var membershipRepo = _mysql.GetRepository<WebAuthUserAccessGroupRecord>(_config.Auth.MySql.ConnectionId);
+        var userRepo = _mysql.GetRepository<MiniBlogAuthUserRecord>(_options.ConnectionId);
+        var groupRepo = _mysql.GetRepository<MiniBlogAuthAccessGroupRecord>(_options.ConnectionId);
+        var membershipRepo = _mysql.GetRepository<MiniBlogAuthUserAccessGroupRecord>(_options.ConnectionId);
 
         foreach (var seed in seeds)
         {
@@ -126,7 +126,7 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
 
             if (user is null)
             {
-                var insertResult = await userRepo.InsertAsync(new WebAuthUserRecord
+                var insertResult = await userRepo.InsertAsync(new MiniBlogAuthUserRecord
                 {
                     UserId = seed.UserId,
                     DisplayName = seed.DisplayName,
@@ -163,7 +163,7 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
 
                 if (group is null)
                 {
-                    var insertResult = await groupRepo.InsertAsync(new WebAuthAccessGroupRecord
+                    var insertResult = await groupRepo.InsertAsync(new MiniBlogAuthAccessGroupRecord
                     {
                         GroupKey = accessGroup,
                         DisplayName = accessGroup,
@@ -183,85 +183,13 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
 
                 if (!hasMembership)
                 {
-                    await membershipRepo.InsertAsync(new WebAuthUserAccessGroupRecord
+                    await membershipRepo.InsertAsync(new MiniBlogAuthUserAccessGroupRecord
                     {
                         UserId = user.Id,
                         AccessGroupId = group.Id
                     }, cancellationToken).ConfigureAwait(false);
                 }
             }
-        }
-    }
-
-    private async Task SeedDemoRecordsAsync()
-    {
-        if (_mysql is null)
-            return;
-
-        var groupRepo = _mysql.GetRepository<WebAuthAccessGroupRecord>(_config.Auth.MySql.ConnectionId);
-        var adminGroupResult = await groupRepo.GetByColumnAsync("group_key", "admin").ConfigureAwait(false);
-        var adminGroup = adminGroupResult.IsSuccess && adminGroupResult.Value is not null
-            ? adminGroupResult.Value.FirstOrDefault()
-            : null;
-
-        if (adminGroup is null)
-        {
-            var inserted = await groupRepo.InsertAsync(new WebAuthAccessGroupRecord
-            {
-                GroupKey = "admin",
-                DisplayName = "Administrators",
-                IsActive = true
-            }).ConfigureAwait(false);
-
-            adminGroup = inserted.IsSuccess ? inserted.Value : null;
-        }
-
-        if (adminGroup is null)
-            return;
-
-        var userRepo = _mysql.GetRepository<WebAuthUserRecord>(_config.Auth.MySql.ConnectionId);
-        var adminUserResult = await userRepo.GetByColumnAsync("user_id", _config.Auth.MySql.DemoAdminUserId).ConfigureAwait(false);
-        var adminUser = adminUserResult.IsSuccess && adminUserResult.Value is not null
-            ? adminUserResult.Value.FirstOrDefault()
-            : null;
-
-        if (adminUser is null)
-        {
-            var inserted = await userRepo.InsertAsync(new WebAuthUserRecord
-            {
-                UserId = _config.Auth.MySql.DemoAdminUserId,
-                DisplayName = "Demo Admin",
-                Email = "demo-admin@example.local",
-                IsActive = true,
-                PasswordHash = ComputePasswordHash("admin123"),
-                PasswordAlgorithm = PasswordAlgorithm
-            }).ConfigureAwait(false);
-
-            adminUser = inserted.IsSuccess ? inserted.Value : null;
-        }
-        else
-        {
-            adminUser.PasswordHash = ComputePasswordHash("admin123");
-            adminUser.PasswordAlgorithm = PasswordAlgorithm;
-            await userRepo.UpdateAsync(adminUser).ConfigureAwait(false);
-        }
-
-        if (adminUser is null)
-            return;
-
-        var membershipRepo = _mysql.GetRepository<WebAuthUserAccessGroupRecord>(_config.Auth.MySql.ConnectionId);
-        var existingMemberships = await membershipRepo.GetByColumnAsync("user_id", adminUser.Id).ConfigureAwait(false);
-        var alreadyLinked = existingMemberships.IsSuccess
-            && existingMemberships.Value is not null
-            && existingMemberships.Value.Any(item => item.AccessGroupId == adminGroup.Id);
-
-        if (!alreadyLinked)
-        {
-            await membershipRepo.InsertAsync(new WebAuthUserAccessGroupRecord
-            {
-                UserId = adminUser.Id,
-                AccessGroupId = adminGroup.Id
-            }).ConfigureAwait(false);
         }
     }
 
@@ -275,8 +203,8 @@ public sealed class WebMySqlIdentityStore : IWebIdentityStore, IWebCredentialVal
     private const string PasswordAlgorithm = "SHA256";
 }
 
-[Table(Name = "weblogic_auth_users")]
-public sealed class WebAuthUserRecord
+[Table(Name = "miniblog_auth_users")]
+public sealed class MiniBlogAuthUserRecord
 {
     [Column(DataType = DataType.BigInt, Primary = true, AutoIncrement = true, NotNull = true)]
     public long Id { get; set; }
@@ -300,8 +228,8 @@ public sealed class WebAuthUserRecord
     public bool IsActive { get; set; } = true;
 }
 
-[Table(Name = "weblogic_auth_access_groups")]
-public sealed class WebAuthAccessGroupRecord
+[Table(Name = "miniblog_auth_access_groups")]
+public sealed class MiniBlogAuthAccessGroupRecord
 {
     [Column(DataType = DataType.BigInt, Primary = true, AutoIncrement = true, NotNull = true)]
     public long Id { get; set; }
@@ -316,8 +244,8 @@ public sealed class WebAuthAccessGroupRecord
     public bool IsActive { get; set; } = true;
 }
 
-[Table(Name = "weblogic_auth_user_access_groups")]
-public sealed class WebAuthUserAccessGroupRecord
+[Table(Name = "miniblog_auth_user_access_groups")]
+public sealed class MiniBlogAuthUserAccessGroupRecord
 {
     [Column(DataType = DataType.BigInt, Primary = true, AutoIncrement = true, NotNull = true)]
     public long Id { get; set; }

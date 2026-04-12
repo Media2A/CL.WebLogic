@@ -5,55 +5,50 @@ using CL.WebLogic.Runtime;
 using CodeLogic;
 using CodeLogic.Framework.Libraries;
 
-namespace CL.WebLogic.MySql;
+namespace MiniBlog.Shared.Infrastructure;
 
-public interface IWebRequestAuditStore
+public sealed class MiniBlogMySqlRequestAuditStore : IWebRequestAuditStore
 {
-    Task InitializeAsync(LibraryContext context, WebLogicConfig config);
-    Task RecordAsync(WebRequestContext request, int statusCode, long durationMs, string source);
-}
-
-public sealed class WebRequestAuditStore : IWebRequestAuditStore
-{
+    private readonly string _connectionId;
+    private readonly bool _enabled;
+    private readonly bool _syncTablesOnStart;
     private LibraryContext? _context;
-    private WebLogicConfig? _config;
     private MySQL2Library? _mysql;
 
-    public WebRequestAuditStore(LibraryContext context, WebLogicConfig config)
+    public MiniBlogMySqlRequestAuditStore(string connectionId, bool enabled, bool syncTablesOnStart = true)
     {
-        _context = context;
-        _config = config;
+        _connectionId = connectionId;
+        _enabled = enabled;
+        _syncTablesOnStart = syncTablesOnStart;
     }
 
     public async Task InitializeAsync(LibraryContext context, WebLogicConfig config)
     {
         _context = context;
-        _config = config;
         _mysql = Libraries.Get<MySQL2Library>();
 
-        if (_mysql is null || !config.MySql.EnableRequestLogging || !config.MySql.SyncTablesOnStart)
+        if (_mysql is null || !_enabled || !_syncTablesOnStart)
             return;
 
         try
         {
-            await _mysql.SyncTableAsync<WebRequestLogRecord>(connectionId: config.MySql.ConnectionId)
-                .ConfigureAwait(false);
+            await _mysql.SyncTableAsync<MiniBlogRequestLogRecord>(connectionId: _connectionId).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _context.Logger.Warning($"Unable to sync WebRequestLogRecord table: {ex.Message}");
+            _context.Logger.Warning($"Unable to sync MiniBlogRequestLogRecord table: {ex.Message}");
         }
     }
 
     public async Task RecordAsync(WebRequestContext request, int statusCode, long durationMs, string source)
     {
-        if (_context is null || _config is null || _mysql is null || !_config.MySql.EnableRequestLogging)
+        if (_context is null || _mysql is null || !_enabled)
             return;
 
         try
         {
-            var repository = _mysql.GetRepository<WebRequestLogRecord>(_config.MySql.ConnectionId);
-            await repository.InsertAsync(new WebRequestLogRecord
+            var repository = _mysql.GetRepository<MiniBlogRequestLogRecord>(_connectionId);
+            await repository.InsertAsync(new MiniBlogRequestLogRecord
             {
                 Method = request.Method,
                 Path = request.Path,
@@ -67,13 +62,13 @@ public sealed class WebRequestAuditStore : IWebRequestAuditStore
         }
         catch (Exception ex)
         {
-            _context.Logger.Warning($"Failed to persist request log: {ex.Message}");
+            _context.Logger.Warning($"Failed to persist MiniBlog request log: {ex.Message}");
         }
     }
 }
 
-[Table(Name = "web_request_log")]
-public sealed class WebRequestLogRecord
+[Table(Name = "miniblog_request_log")]
+public sealed class MiniBlogRequestLogRecord
 {
     [Column(DataType = DataType.BigInt, Primary = true, AutoIncrement = true, NotNull = true)]
     public long Id { get; set; }

@@ -1,0 +1,12 @@
+{layout:layouts/main}
+
+<article class="article-shell">
+    <div class="article-meta">
+        <span>{model:post.AuthorDisplayName}</span>
+        <span>{model:post.PublishedUtc}</span>
+        <span class="status-pill">{model:post.Status}</span>
+    </div>
+    <div class="article-body">
+        {raw:model:post.BodyHtml}
+    </div>
+</article>

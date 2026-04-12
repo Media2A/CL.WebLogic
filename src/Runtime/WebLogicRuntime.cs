@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using CL.WebLogic.Configuration;
-using CL.WebLogic.MySql;
 using CL.WebLogic.Routing;
 using CL.WebLogic.Security;
 using CL.WebLogic.Theming;
@@ -17,8 +16,19 @@ public sealed class WebLogicRuntime
     private readonly ThemeManager _themeManager;
     private readonly WebSecurityService _security;
     private readonly IWebRequestAuditStore _auditStore;
+    private readonly List<IWebMiddleware> _globalMiddleware = [];
 
     public string? ThemeRoot { get; private set; }
+
+    public void UseMiddleware(IWebMiddleware middleware)
+    {
+        _globalMiddleware.Add(middleware ?? throw new ArgumentNullException(nameof(middleware)));
+    }
+
+    public void UseMiddleware(Func<WebRequestContext, WebMiddlewareNext, Task<WebResult>> handler)
+    {
+        _globalMiddleware.Add(new WebDelegateMiddleware(handler));
+    }
 
     public WebLogicRuntime(
         LibraryContext context,
@@ -46,11 +56,13 @@ public sealed class WebLogicRuntime
     {
         ThemeRoot = await _themeManager.ResolveThemeRootAsync().ConfigureAwait(false);
         _context.Logger.Info($"Theme root resolved to: {ThemeRoot}");
+        _themeManager.InitializeCaching(ThemeRoot);
         await _auditStore.InitializeAsync(_context, _config).ConfigureAwait(false);
     }
 
     public Task StopAsync()
     {
+        _themeManager.DisposeCaching();
         _context.Logger.Info("CL.WebLogic runtime stopped");
         return Task.CompletedTask;
     }
@@ -94,14 +106,25 @@ public sealed class WebLogicRuntime
                     return;
                 }
 
-                var result = await route.Handler(request).ConfigureAwait(false);
+                var csrfResult = _security.ValidateCsrf(request);
+                if (csrfResult is not null)
+                {
+                    await WriteAsync(httpContext, request, csrfResult).ConfigureAwait(false);
+                    await FinalizeRequestAsync(request, csrfResult.StatusCode, started.ElapsedMilliseconds, "csrf_blocked")
+                        .ConfigureAwait(false);
+                    return;
+                }
+
+                var result = await ExecuteWithMiddlewareAsync(request, route).ConfigureAwait(false);
                 await WriteAsync(httpContext, request, result).ConfigureAwait(false);
                 await FinalizeRequestAsync(request, result.StatusCode, started.ElapsedMilliseconds, route.Kind.ToString())
                     .ConfigureAwait(false);
                 return;
             }
 
-            var asset = await _themeManager.TryReadAssetAsync(request.Path, ThemeRoot).ConfigureAwait(false);
+            var ifNoneMatch = httpContext.Request.Headers.IfNoneMatch.FirstOrDefault();
+            var ifModifiedSince = httpContext.Request.Headers.IfModifiedSince.FirstOrDefault();
+            var asset = await _themeManager.TryReadAssetAsync(request.Path, ThemeRoot, ifNoneMatch, ifModifiedSince).ConfigureAwait(false);
             if (asset is not null)
             {
                 await WriteAsync(httpContext, request, asset).ConfigureAwait(false);
@@ -124,7 +147,7 @@ public sealed class WebLogicRuntime
                     return;
                 }
 
-                var result = await fallback.Handler(request).ConfigureAwait(false);
+                var result = await ExecuteWithMiddlewareAsync(request, fallback).ConfigureAwait(false);
                 await WriteAsync(httpContext, request, result).ConfigureAwait(false);
                 await FinalizeRequestAsync(request, result.StatusCode, started.ElapsedMilliseconds, "Fallback")
                     .ConfigureAwait(false);
@@ -140,6 +163,28 @@ public sealed class WebLogicRuntime
         {
             WebRequestContextAccessor.Current = null;
         }
+    }
+
+    private Task<WebResult> ExecuteWithMiddlewareAsync(WebRequestContext request, WebRouteDefinition route)
+    {
+        var chain = new List<IWebMiddleware>(_globalMiddleware.Count + route.Middleware.Length);
+        chain.AddRange(_globalMiddleware);
+        chain.AddRange(route.Middleware);
+
+        if (chain.Count == 0)
+            return route.Handler(request);
+
+        var index = -1;
+        WebMiddlewareNext next = null!;
+        next = () =>
+        {
+            index++;
+            return index < chain.Count
+                ? chain[index].InvokeAsync(request, next)
+                : route.Handler(request);
+        };
+
+        return next();
     }
 
     private async Task<WebRequestContext> CreateContextAsync(HttpContext httpContext)
@@ -173,12 +218,22 @@ public sealed class WebLogicRuntime
         httpContext.Response.StatusCode = result.StatusCode;
         httpContext.Response.ContentType = result.ContentType;
 
+        if (result.Headers is not null)
+        {
+            foreach (var header in result.Headers)
+                httpContext.Response.Headers[header.Key] = header.Value;
+        }
+
+        if (result.StatusCode == 304)
+            return;
+
         if (result.TemplatePath is not null)
         {
+            var effectiveThemeRoot = result.ThemeRoot ?? ThemeRoot;
             var html = await _themeManager.RenderTemplateAsync(
                 result.TemplatePath,
                 result.Model,
-                ThemeRoot,
+                effectiveThemeRoot,
                 request,
                 result.Meta).ConfigureAwait(false);
             await httpContext.Response.WriteAsync(html).ConfigureAwait(false);

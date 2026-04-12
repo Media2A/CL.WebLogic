@@ -9,6 +9,7 @@ public sealed class WebPageDocument
     public IReadOnlyDictionary<string, object?>? Model { get; init; }
     public WebPageMeta? Meta { get; init; }
     public int StatusCode { get; init; } = 200;
+    public string? ThemeRoot { get; init; }
 }
 
 public sealed class WebPageMeta

@@ -84,7 +84,7 @@ This is sample structure, not a required `CL.WebLogic` app shape.
 - Bootstrap provides the layout system, components, and interaction polish.
 - jQuery powers the dashboard refresh flow and the runtime data panels.
 - The shared browser toolkit now comes from the library itself instead of living only inside the sample theme.
-- `CL.GitHelper`, `CL.StorageS3`, `CL.NetUtils`, and `CL.MySQL2` are still part of the runtime shape even though the theme itself stays focused on presentation.
+- `CL.GitHelper`, `CL.StorageS3`, and `CL.NetUtils` are still part of the broader toolkit shape even though this starter stays focused on presentation and app-owned persistence.
 - The theme is ready for a future SignalR live feed panel once the runtime hub lands.
 - The starter still includes demo-only auth and dashboard choices on purpose. They are examples of using the toolkit, not hard requirements of `CL.WebLogic`.
 

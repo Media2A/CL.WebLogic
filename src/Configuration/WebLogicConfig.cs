@@ -12,7 +12,6 @@ public sealed class WebLogicConfig : ConfigModelBase
     public SecurityConfig Security { get; set; } = new();
     public AuthConfig Auth { get; set; } = new();
     public StorageConfig Storage { get; set; } = new();
-    public MySqlConfig MySql { get; set; } = new();
     public WidgetConfig Widgets { get; set; } = new();
 
     public override ConfigValidationResult Validate()
@@ -39,6 +38,7 @@ public sealed class ThemeConfig
     public string Branch { get; set; } = "main";
     public bool AutoSyncOnStart { get; set; } = false;
     public string ThemeSubPath { get; set; } = "";
+    public bool EnableCaching { get; set; } = true;
 }
 
 public enum ThemeSource
@@ -52,33 +52,18 @@ public sealed class SecurityConfig
     public bool EnforceHttps { get; set; } = false;
     public bool TrustForwardedHeaders { get; set; } = true;
     public bool EnableDnsbl { get; set; } = false;
+    public bool EnableCsrf { get; set; } = true;
+    public bool EnableCompression { get; set; } = true;
     public string[] AllowedMethods { get; set; } = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
     public RateLimitConfig RateLimit { get; set; } = new();
 }
 
 public sealed class AuthConfig
 {
-    public WebAuthMode Mode { get; set; } = WebAuthMode.None;
     public bool AllowHeaderUserId { get; set; } = true;
     public bool AllowHeaderAccessGroups { get; set; } = true;
     public bool AllowSessionUserId { get; set; } = true;
     public bool AllowSessionAccessGroups { get; set; } = true;
-    public MySqlAuthConfig MySql { get; set; } = new();
-}
-
-public enum WebAuthMode
-{
-    None,
-    MySql
-}
-
-public sealed class MySqlAuthConfig
-{
-    public bool Enabled { get; set; } = false;
-    public bool SyncTablesOnStart { get; set; } = true;
-    public bool SeedDemoRecords { get; set; } = false;
-    public string ConnectionId { get; set; } = "Default";
-    public string DemoAdminUserId { get; set; } = "demo-admin";
 }
 
 public sealed class RateLimitConfig
@@ -103,13 +88,6 @@ public enum WebStorageMode
 {
     Local,
     S3
-}
-
-public sealed class MySqlConfig
-{
-    public bool EnableRequestLogging { get; set; } = false;
-    public bool SyncTablesOnStart { get; set; } = true;
-    public string ConnectionId { get; set; } = "Default";
 }
 
 public sealed class WidgetConfig

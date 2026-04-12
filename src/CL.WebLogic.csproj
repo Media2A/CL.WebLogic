@@ -18,7 +18,6 @@
     <ProjectReference Include="..\..\CodeLogic\src\CodeLogic.csproj" />
     <ProjectReference Include="..\..\CodeLogic.Libs\CL.Common\CL.Common.csproj" />
     <ProjectReference Include="..\..\CodeLogic.Libs\CL.GitHelper\CL.GitHelper.csproj" />
-    <ProjectReference Include="..\..\CodeLogic.Libs\CL.MySQL2\CL.MySQL2.csproj" />
     <ProjectReference Include="..\..\CodeLogic.Libs\CL.NetUtils\CL.NetUtils.csproj" />
     <ProjectReference Include="..\..\CodeLogic.Libs\CL.StorageS3\CL.StorageS3.csproj" />
   </ItemGroup>

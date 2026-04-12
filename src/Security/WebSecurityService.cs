@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using CL.NetUtils;
 using CL.WebLogic.Configuration;
 using CL.WebLogic.Routing;
@@ -101,6 +102,53 @@ public sealed class WebSecurityService
 
         PublishBlockedEvent(request, StatusCodes.Status403Forbidden, $"rbac:{string.Join(",", route.RequiredAccessGroups)}");
         return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
+    }
+
+    private const string CsrfSessionKey = "weblogic.csrf_token";
+    private const string CsrfFormField = "_csrf";
+    private const string CsrfHeader = "X-CSRF-Token";
+
+    private static readonly HashSet<string> CsrfSafeMethods = new(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD", "OPTIONS" };
+
+    public string GetOrCreateCsrfToken(HttpContext httpContext)
+    {
+        var existing = httpContext.Session.GetString(CsrfSessionKey);
+        if (!string.IsNullOrWhiteSpace(existing))
+            return existing;
+
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+        httpContext.Session.SetString(CsrfSessionKey, token);
+        return token;
+    }
+
+    public WebResult? ValidateCsrf(WebRequestContext request)
+    {
+        if (!_config.Security.EnableCsrf)
+            return null;
+
+        if (CsrfSafeMethods.Contains(request.Method))
+            return null;
+
+        if (request.HttpContext.Request.Headers.ContainsKey("X-Requested-With"))
+        {
+            var header = request.HttpContext.Request.Headers["X-Requested-With"].ToString();
+            if (string.Equals(header, "WebLogicClient", StringComparison.OrdinalIgnoreCase))
+                return null;
+        }
+
+        var sessionToken = request.HttpContext.Session.GetString(CsrfSessionKey);
+        if (string.IsNullOrWhiteSpace(sessionToken))
+            return null;
+
+        var submittedToken = request.HttpContext.Request.Headers[CsrfHeader].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(submittedToken))
+            submittedToken = request.HttpContext.Request.Form.TryGetValue(CsrfFormField, out var formValue) ? formValue.ToString() : null;
+
+        if (string.Equals(sessionToken, submittedToken, StringComparison.Ordinal))
+            return null;
+
+        PublishBlockedEvent(request, StatusCodes.Status403Forbidden, "csrf_invalid");
+        return WebResult.Text("CSRF validation failed", StatusCodes.Status403Forbidden);
     }
 
     private void PublishBlockedEvent(WebRequestContext request, int statusCode, string reason)

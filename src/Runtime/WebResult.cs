@@ -11,6 +11,8 @@ public sealed class WebResult
     public string? TemplatePath { get; init; }
     public IReadOnlyDictionary<string, object?>? Model { get; init; }
     public WebPageMeta? Meta { get; init; }
+    public Dictionary<string, string>? Headers { get; init; }
+    public string? ThemeRoot { get; init; }
 
     public static WebResult Html(string html, int statusCode = 200) => new()
     {
@@ -59,6 +61,38 @@ public sealed class WebResult
         ContentType = "text/html; charset=utf-8",
         TemplatePath = document.TemplatePath,
         Model = document.Model,
-        Meta = document.Meta
+        Meta = document.Meta,
+        ThemeRoot = document.ThemeRoot
     };
+
+    /// <summary>
+    /// Returns a JSON response with server commands for the WebLogic client to process.
+    /// Commands: toast, redirect, navigate, reload, replace, remove, addClass, removeClass.
+    /// </summary>
+    public static WebResult Commands(params object[] commands) => Json(new
+    {
+        success = true,
+        commands
+    });
+
+    public static object ToastCommand(string message, string variant = "success") =>
+        new { type = "toast", message, variant };
+
+    public static object RedirectCommand(string url) =>
+        new { type = "redirect", url };
+
+    public static object NavigateCommand(string url) =>
+        new { type = "navigate", url };
+
+    public static object ReloadCommand() =>
+        new { type = "reload" };
+
+    public static object ReplaceCommand(string selector, string html) =>
+        new { type = "replace", selector, html };
+
+    public static object RemoveCommand(string selector) =>
+        new { type = "remove", selector };
+
+    public static object OverlayCommand(string title, string message, string variant = "success", int duration = 2000) =>
+        new { type = "overlay", title, message, variant, duration };
 }

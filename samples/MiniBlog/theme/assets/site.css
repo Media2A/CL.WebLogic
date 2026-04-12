@@ -1,0 +1,196 @@
+:root {
+    --ink: #161616;
+    --paper: #f6f1e8;
+    --accent: #bc6c25;
+    --muted: #6c6c6c;
+    --panel: #fffaf2;
+    --admin: #10222e;
+}
+
+body {
+    background:
+        radial-gradient(circle at top, rgba(188,108,37,0.14), transparent 35%),
+        linear-gradient(180deg, #fbf8f2 0%, #f3ede2 100%);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.site-nav {
+    background: rgba(255, 250, 242, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(22, 22, 22, 0.08);
+}
+
+.navbar-brand, h1, h2, h3, h4 {
+    font-family: Georgia, "Times New Roman", serif;
+    letter-spacing: -0.02em;
+}
+
+.hero-shell {
+    padding: 4rem 1.5rem 2rem;
+}
+
+.hero-shell__inner {
+    max-width: 72rem;
+    margin: 0 auto;
+}
+
+.eyebrow, .section-label, .metric-label {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+
+.hero-copy, .post-card p, .listing-card p, .article-body p, .demo-user-meta {
+    color: var(--muted);
+    font-family: "Segoe UI", sans-serif;
+}
+
+.content-shell {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+}
+
+.container-grid, .admin-surface {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 2fr 1fr;
+}
+
+.feature-story, .sidebar-card, .listing-card, .admin-card, .auth-panel, .auth-demo {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(22, 22, 22, 0.08);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 20px 50px rgba(22,22,22,0.05);
+}
+
+.admin-card {
+    background: linear-gradient(180deg, rgba(16,34,46,0.98), rgba(19,39,52,0.94));
+    color: #f5efe5;
+}
+
+.admin-card p, .admin-card a, .admin-card span, .admin-card h3 {
+    color: inherit;
+}
+
+.admin-card--wide, .article-shell {
+    grid-column: 1 / -1;
+}
+
+.post-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.post-card, .admin-list__item, .admin-table__row {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(255,255,255,0.66);
+    border: 1px solid rgba(22,22,22,0.08);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.listing-shell, .sidebar-links, .admin-list, .admin-table {
+    display: grid;
+    gap: 1rem;
+}
+
+.posts-pager {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 2rem;
+    justify-items: center;
+}
+
+.posts-pager__summary {
+    color: var(--muted);
+    font-family: "Segoe UI", sans-serif;
+}
+
+.posts-pager__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.posts-pager__page {
+    min-width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(22,22,22,0.12);
+    background: rgba(255,255,255,0.72);
+    color: var(--ink);
+    text-decoration: none;
+    font-family: "Segoe UI", sans-serif;
+}
+
+.posts-pager__page--current {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+}
+
+.auth-shell {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1.2fr 1fr;
+}
+
+.demo-user-card {
+    padding: 1rem 0;
+    border-top: 1px solid rgba(22,22,22,0.08);
+}
+
+.demo-user-title, .metric-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.btn-ink {
+    background: var(--ink);
+    color: white;
+    border-radius: 999px;
+    padding-inline: 1rem;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    background: rgba(188,108,37,0.14);
+    color: var(--accent);
+    font-family: "Segoe UI", sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.site-footer {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 2rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-family: "Segoe UI", sans-serif;
+}
+
+@media (max-width: 900px) {
+    .container-grid, .admin-surface, .auth-shell {
+        grid-template-columns: 1fr;
+    }
+}

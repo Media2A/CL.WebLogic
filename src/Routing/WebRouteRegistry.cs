@@ -24,6 +24,7 @@ public sealed class WebRouteDefinition
     public required string[] Tags { get; init; }
     public required string[] RequiredAccessGroups { get; init; }
     public required bool AllowAnonymous { get; init; }
+    public IWebMiddleware[] Middleware { get; init; } = [];
 }
 
 public sealed class WebRouteRegistry
@@ -63,7 +64,8 @@ public sealed class WebRouteRegistry
             Description = options.Description,
             Tags = options.Tags,
             RequiredAccessGroups = options.RequiredAccessGroups,
-            AllowAnonymous = options.AllowAnonymous
+            AllowAnonymous = options.AllowAnonymous,
+            Middleware = options.Middleware ?? []
         };
     }
 
@@ -89,7 +91,7 @@ public sealed class WebRouteRegistry
     }
 
     public bool TryGet(string path, out WebRouteDefinition? route) =>
-        _routes.TryGetValue(NormalizePath(path), out route);
+        TryMatch(NormalizePath(path), out route);
 
     public IReadOnlyList<WebRouteDefinition> GetAllRoutes() =>
         _routes.Values
@@ -160,6 +162,36 @@ public sealed class WebRouteRegistry
             normalized = normalized[..^1];
 
         return normalized;
+    }
+
+    private bool TryMatch(string normalizedPath, out WebRouteDefinition? route)
+    {
+        if (_routes.TryGetValue(normalizedPath, out route))
+            return true;
+
+        route = _routes.Values
+            .Where(static candidate => candidate.Path.Contains('*', StringComparison.Ordinal))
+            .Where(candidate => IsWildcardMatch(candidate.Path, normalizedPath))
+            .OrderByDescending(candidate => candidate.Path.Length)
+            .FirstOrDefault();
+
+        return route is not null;
+    }
+
+    private static bool IsWildcardMatch(string pattern, string path)
+    {
+        if (string.Equals(pattern, "*", StringComparison.Ordinal))
+            return true;
+
+        if (!pattern.Contains('*', StringComparison.Ordinal))
+            return false;
+
+        var wildcardIndex = pattern.IndexOf('*');
+        if (wildcardIndex < 0)
+            return false;
+
+        var prefix = pattern[..wildcardIndex];
+        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
     private static HashSet<string> NormalizeMethods(string[] methods)

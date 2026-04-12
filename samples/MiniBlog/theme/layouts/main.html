@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {renderhead}
+    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body data-weblogic-nav="auto">
+    <div class="page-shell" data-weblogic-shell>
+        {partial:partials/site-nav}
+        <header class="hero-shell">
+            <div class="hero-shell__inner">
+                <p class="eyebrow">Northwind Journal</p>
+                <h1>{model:hero_title}</h1>
+                <p class="hero-copy">{model:hero_copy}</p>
+            </div>
+        </header>
+        <main class="content-shell">
+            {renderbody}
+        </main>
+        <footer class="site-footer">
+            <span>MiniBlog demonstrates CL.WebLogic, CL.MySQL2, CodeLogic plugins, and RBAC.</span>
+            <span data-current-year></span>
+        </footer>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="siteToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="siteToastTitle">Northwind Journal</strong>
+                <small>now</small>
+                <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="siteToastBody">Ready.</div>
+        </div>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
+    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="/weblogic/client/weblogic.client.js"></script>
+    <script src="/assets/site.js"></script>
+</body>
+</html>

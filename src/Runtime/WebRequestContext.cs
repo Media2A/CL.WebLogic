@@ -36,6 +36,8 @@ public sealed class WebRequestContext
     public bool IsAuthenticated => Identity.IsAuthenticated;
     public string UserId => Identity.UserId;
     public IReadOnlyCollection<string> AccessGroups => Identity.AccessGroups;
+    public IReadOnlyCollection<string> Permissions => Identity.Permissions;
+    public bool HasPermission(string permission) => Identity.HasPermission(permission);
     public WebFormContext Forms => _formsContext ??= new WebFormContext(this);
 
     public static WebRequestContext? Current => WebRequestContextAccessor.Current;
@@ -196,11 +198,23 @@ public sealed class WebUploadedFile
 public sealed class WebRequestIdentity
 {
     private readonly HashSet<string> _accessGroups;
+    private readonly HashSet<string> _permissions;
 
-    public WebRequestIdentity(string? userId, IEnumerable<string>? accessGroups)
+    /// <summary>
+    /// Optional external permission resolver. When set, HasPermission checks this
+    /// before falling back to the built-in permissions set.
+    /// Apps can use this to resolve permissions from a server-side cache based on access groups.
+    /// </summary>
+    public static Func<IEnumerable<string>, string, bool>? ExternalPermissionResolver { get; set; }
+
+    public WebRequestIdentity(string? userId, IEnumerable<string>? accessGroups, IEnumerable<string>? permissions = null)
     {
         UserId = string.IsNullOrWhiteSpace(userId) ? string.Empty : userId;
         _accessGroups = (accessGroups ?? [])
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _permissions = (permissions ?? [])
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => value.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -209,12 +223,24 @@ public sealed class WebRequestIdentity
     public string UserId { get; }
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(UserId) || _accessGroups.Count > 0;
     public IReadOnlyCollection<string> AccessGroups => _accessGroups;
+    public IReadOnlyCollection<string> Permissions => _permissions;
 
     public bool HasAccessGroup(string accessGroup) =>
         _accessGroups.Contains(accessGroup);
 
     public bool HasAnyAccessGroup(IEnumerable<string> accessGroups) =>
         accessGroups.Any(HasAccessGroup);
+
+    public bool HasPermission(string permission)
+    {
+        if (_permissions.Contains(permission))
+            return true;
+
+        return ExternalPermissionResolver?.Invoke(_accessGroups, permission) ?? false;
+    }
+
+    public bool HasAnyPermission(IEnumerable<string> permissions) =>
+        permissions.Any(HasPermission);
 }
 
 public static class WebLogicRequest

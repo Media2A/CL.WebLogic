@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>MiniBlog.Admin.Plugin</AssemblyName>
+    <RootNamespace>MiniBlog.Admin.Plugin</RootNamespace>
+    <OutputPath>..\..\MiniBlog\data\plugins\MiniBlog.Admin.Plugin\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\CL.WebLogic.csproj" />
+    <ProjectReference Include="..\..\MiniBlog.Shared\MiniBlog.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\CodeLogic\src\CodeLogic.csproj" />
+  </ItemGroup>
+
+</Project>

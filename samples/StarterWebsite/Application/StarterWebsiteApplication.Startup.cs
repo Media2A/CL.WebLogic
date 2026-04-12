@@ -1,6 +1,5 @@
 using CL.WebLogic;
 using CL.WebLogic.Forms;
-using CL.WebLogic.MySql;
 using CL.WebLogic.Routing;
 using CL.WebLogic.Runtime;
 using CL.WebLogic.Security;
@@ -43,8 +42,6 @@ public sealed partial class StarterWebsiteApplication
             Kind = "Application",
             Description = Manifest.Description ?? string.Empty
         }, this).ConfigureAwait(false);
-
-        await SeedIdentityAsync(web).ConfigureAwait(false);
         await SeedWidgetSettingsAsync(web).ConfigureAwait(false);
         await SeedDashboardLayoutsAsync(web, context).ConfigureAwait(false);
     }
@@ -62,22 +59,6 @@ public sealed partial class StarterWebsiteApplication
             ValueProperty = "id",
             LabelProperty = "label"
         });
-    }
-
-    private async Task SeedIdentityAsync(WebLogicLibrary web)
-    {
-        if (web.IdentityStore is not WebMySqlIdentityStore mySqlIdentityStore)
-            return;
-
-        await mySqlIdentityStore.SeedUsersAsync(_config.DemoUsers.Select(user => new WebIdentitySeed
-        {
-            UserId = user.UserId,
-            DisplayName = user.DisplayName,
-            Email = BuildEmail(user.UserId),
-            Password = user.Password,
-            AccessGroups = user.AccessGroups,
-            IsActive = true
-        })).ConfigureAwait(false);
     }
 
     private static async Task SeedWidgetSettingsAsync(WebLogicLibrary web)
