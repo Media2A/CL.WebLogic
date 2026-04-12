@@ -1,83 +1,217 @@
 # CL.WebLogic
 
-`CL.WebLogic` is a web application toolkit for CodeLogic3.
+A web application toolkit for [CodeLogic 3](https://github.com/Media2A/CodeLogic) — providing routing, templating, forms, realtime, and SPA navigation for .NET 10 web applications.
 
-It is intentionally being shaped as a foundation, not a monolithic CMS product.
+## Features
 
-## Structure
+| Feature | Description |
+|---------|-------------|
+| **Routing** | Attribute-free page and API registration with tags, access groups, and middleware |
+| **Template Engine** | File-based HTML templates with layouts, partials, conditionals, loops, filters, and model binding |
+| **SPA Navigation** | Client-side shell swap with layout detection, history management, and content transitions |
+| **Form System** | C# model-based forms with client+server validation, AJAX submission, and file uploads |
+| **Widget System** | Composable widget areas with server-rendered content and client-side refresh |
+| **Server Commands** | JSON command responses: toast, overlay, redirect, navigate, reload, replace DOM |
+| **Realtime** | SignalR bridge with auto-connect, event channels, and widget refresh |
+| **Auth Abstractions** | Pluggable identity store, session auth, RBAC with permission resolver |
+| **Plugin Support** | `IWebRouteContributor` for plugins to register routes with their own theme directories |
+| **Asset Pipeline** | Static file serving with ETag, Last-Modified, Cache-Control headers |
+| **Security** | CSRF protection, rate limiting, response compression |
 
-The repo is moving toward three clear layers:
+## Architecture
 
-- `src/`
-  The server-side `CL.WebLogic` toolkit:
-  routing, request context, theming, widgets, forms, metadata, realtime, auth abstractions, and dashboard primitives.
-- `src/Client/`
-  The shared browser-side `CL.WebLogic.Client` runtime owned by the library itself.
-- `samples/StarterWebsite/`
-  A reference/demo site that consumes the toolkit and shows patterns for pages, plugins, forms, widgets, dashboards, auth, and realtime features.
-- `tests/`
-  Focused toolkit tests for stable seams such as forms and widget registries.
+```
+CL.WebLogic/
+├── src/                    — Server-side toolkit
+│   ├── AspNetCore/         — ASP.NET Core integration
+│   ├── Client/             — Browser-side client runtime (weblogic.client.js)
+│   ├── Configuration/      — Config models
+│   ├── Forms/              — Form binding, validation, rendering, schemas
+│   ├── Routing/            — Route registration, contributor contracts
+│   ├── Runtime/            — Request context, results, middleware, auditing
+│   ├── Security/           — Auth support, CSRF, security service
+│   └── Theming/            — Template engine, widget system, dashboard layouts
+├── samples/
+│   ├── StarterWebsite/     — Reference app with pages, widgets, forms, auth
+│   ├── MiniBlog/           — Blog sample with admin plugin
+│   └── Plugins/            — Sample plugin projects
+└── tests/                  — Toolkit unit tests
+```
 
-## Current Focus
+## Quick Start
 
-The current cleanup/consolidation direction is:
+```csharp
+using CL.WebLogic;
 
-- keep core toolkit code inside `src/`
-- keep demo-specific behavior inside `samples/StarterWebsite/`
-- reduce duplicate sample-only implementations
-- make the client runtime a real toolkit surface instead of only a starter asset
-- prepare the repo for better tests, docs, and packaging
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
 
-## Starter Site
+app.UseWebLogic(options =>
+{
+    options.FrameworkRootPath = "data/codelogic";
+    options.ApplicationRootPath = "data/app";
+});
 
-The starter demo is intentionally broad, but it is not the source of truth for the toolkit itself.
+app.Run();
+```
 
-Use it as:
+### Register Routes
 
-- a reference application
-- a feature showcase
-- a place to test integration patterns
+```csharp
+public class MyApp : IApplication, IWebRouteContributor
+{
+    public Task RegisterRoutesAsync(WebRegistrationContext context)
+    {
+        context.RegisterPage("/", new WebRouteOptions
+        {
+            Name = "Home",
+            Description = "Homepage"
+        }, HandleHomeAsync, "GET");
 
-Not as:
+        return Task.CompletedTask;
+    }
 
-- the architectural definition of every `CL.WebLogic` feature
-- the only location of reusable client/runtime code
+    private Task<WebResult> HandleHomeAsync(WebRequestContext request)
+    {
+        return Task.FromResult(WebResult.Document(new WebPageDocument
+        {
+            TemplatePath = "templates/home.html",
+            Model = new Dictionary<string, object?>
+            {
+                ["title"] = "Welcome"
+            }
+        }));
+    }
+}
+```
 
-The sample app is also being split by concern so it is easier to navigate:
+### Templates
 
-- `StarterWebsiteApplication.Startup.cs`
-- `StarterWebsiteApplication.Helpers.cs`
-- `StarterWebsiteApplication.Widgets.cs`
-- `StarterWebsiteApplication.Pages.cs`
-- `StarterWebsiteApplication.Apis.cs`
-- `StarterWebsiteApplication.Fallbacks.cs`
+```html
+{layout:layouts/main}
 
-That layout is meant to keep demo code readable without turning the sample into the toolkit.
+<h1>{model:title}</h1>
+
+{if:auth}
+    <p>Welcome back, {session:display_name}!</p>
+{/if}
+
+{ifnot:auth}
+    <a href="/login">Sign in</a>
+{/ifnot}
+
+{widgetarea:home.sidebar}
+```
+
+### Form Models
+
+```csharp
+[WebForm(Id = "contact", Name = "Contact Form")]
+public class ContactForm
+{
+    [WebFormField(Label = "Name", Required = true, MinLength = 2, MaxLength = 100)]
+    public string Name { get; set; } = "";
+
+    [WebFormField(Label = "Email", InputType = WebFormInputType.Email, Required = true)]
+    public string Email { get; set; } = "";
+
+    [WebFormField(Label = "Message", InputType = WebFormInputType.TextArea, Required = true)]
+    public string Message { get; set; } = "";
+}
+```
+
+Server-side validation:
+
+```csharp
+var result = await request.Forms.BindAsync<ContactForm>();
+if (!result.IsValid)
+    return WebResult.Json(new { errors = result.Errors });
+```
+
+Client schema auto-generated:
+
+```csharp
+var schema = request.Forms.GetClientSchema<ContactForm>();
+```
+
+### Server Commands
+
+Return JSON commands from API handlers — the client processes them automatically:
+
+```csharp
+return WebResult.Commands(
+    WebResult.ToastCommand("Saved!", "success"),
+    WebResult.NavigateCommand("/dashboard"));
+
+// Or full-screen overlay:
+return WebResult.Commands(
+    WebResult.OverlayCommand("Success", "Your changes have been saved", "success", 2000),
+    WebResult.RedirectCommand("/home"));
+```
+
+### AJAX Forms
+
+Add `data-weblogic-form="ajax"` to any form — it submits via fetch and processes command responses:
+
+```html
+<form method="post" action="/api/contact" data-weblogic-form="ajax"
+      data-weblogic-form-schema="schema-contact">
+    <input type="text" name="Name" required>
+    <button type="submit">Send</button>
+</form>
+<script type="application/json" id="schema-contact">
+    <!-- Auto-generated from C# model -->
+</script>
+```
+
+### Plugins
+
+Plugins register their own routes and can serve from their own theme directory:
+
+```csharp
+public class MyPlugin : IPlugin, IWebRouteContributor
+{
+    public Task RegisterRoutesAsync(WebRegistrationContext context)
+    {
+        context.RegisterPage("/my-plugin", options, async request =>
+        {
+            return WebResult.Document(new WebPageDocument
+            {
+                TemplatePath = "templates/page.html",
+                ThemeRoot = _pluginThemeRoot  // Serve from plugin's own theme
+            });
+        }, "GET");
+
+        return Task.CompletedTask;
+    }
+}
+```
+
+## Samples
+
+| Sample | Description |
+|--------|-------------|
+| **StarterWebsite** | Full reference app: pages, auth, widgets, forms, dashboards |
+| **MiniBlog** | Simple blog with posts, admin panel plugin, and widget areas |
+
+Run the starter:
+
+```bash
+cd samples/StarterWebsite
+dotnet run
+```
 
 ## Tests
 
-The test suite is intentionally starting small and focused.
-
-Current coverage includes:
-
-- form definition, schema overrides, and rendering primitives
-- widget descriptor and widget-area registry behavior
-
-Run the current test project with:
-
-```powershell
-dotnet test .\tests\CL.WebLogic.Tests\CL.WebLogic.Tests.csproj -p:UseSharedCompilation=false
+```bash
+dotnet test tests/CL.WebLogic.Tests/CL.WebLogic.Tests.csproj
 ```
 
-## Quick Commands
+## Requirements
 
-For local day-to-day work:
+- .NET 10
+- [CodeLogic 3](https://github.com/Media2A/CodeLogic)
 
-```powershell
-.\scripts\Run-Starter.ps1
-.\scripts\Test-Toolkit.ps1
-```
+## License
 
-## Snapshot
-
-See `CHANGELOG.md` for the current toolkit snapshot before the cleanup pass.
+Proprietary — Media2A.

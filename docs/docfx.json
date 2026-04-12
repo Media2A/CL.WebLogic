@@ -1,0 +1,43 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": ["src/CL.WebLogic.csproj"],
+          "src": "../"
+        }
+      ],
+      "dest": "api",
+      "disableGitFeatures": false,
+      "disableDefaultFilter": false
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": ["api/**.yml", "api/index.md"]
+      },
+      {
+        "files": ["articles/**.md", "articles/**/toc.yml", "toc.yml", "index.md"]
+      }
+    ],
+    "resource": [
+      {
+        "files": ["images/**"]
+      }
+    ],
+    "dest": "../docs-output",
+    "globalMetadata": {
+      "_appTitle": "CL.WebLogic",
+      "_appLogoPath": "images/logo.png",
+      "_appFaviconPath": "images/favicon.ico",
+      "_enableSearch": true,
+      "_appFooter": "Copyright &copy; 2026 Media2A. Built with <a href='https://dotnet.github.io/docfx'>DocFX</a>.",
+      "_appName": "CL.WebLogic"
+    },
+    "template": ["default", "modern"],
+    "sitemap": {
+      "baseUrl": "https://media2a.github.io/CL.WebLogic"
+    }
+  }
+}
