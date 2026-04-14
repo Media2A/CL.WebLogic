@@ -19,6 +19,12 @@ namespace CL.WebLogic.Theming;
 
 public sealed partial class ThemeManager
 {
+    /// <summary>
+    /// Global model defaults that are merged into every template render.
+    /// Values here act as fallbacks — explicit model values take precedence.
+    /// </summary>
+    public static Dictionary<string, object?> GlobalModelDefaults { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     private static readonly Regex LayoutRegex = new(
         @"^\s*\{layout:([^\}]+)\}\s*",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
@@ -188,11 +194,17 @@ public sealed partial class ThemeManager
         if (text is null)
             return $"<html><body><h1>Template not found</h1><p>{HtmlHelper.Encode(normalizedPath)}</p></body></html>";
 
+        // Merge global defaults with the provided model (model values take precedence)
+        var mergedModel = new Dictionary<string, object?>(GlobalModelDefaults, StringComparer.OrdinalIgnoreCase);
+        if (model is not null)
+            foreach (var kvp in model)
+                mergedModel[kvp.Key] = kvp.Value;
+
         var renderContext = new TemplateRenderContext
         {
             TemplatePath = normalizedPath,
             ThemeRoot = themeRoot,
-            Model = model ?? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
+            Model = mergedModel,
             PageContext = pageContext,
             Meta = meta,
             Sections = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
