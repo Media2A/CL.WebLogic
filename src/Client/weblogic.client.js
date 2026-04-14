@@ -366,7 +366,8 @@
                 finishProgress(true);
                 state.navigation.isNavigating = false;
                 emit("navigate:error", { url: targetUrl, error: error });
-                console.error("WebLogicClient navigation failed", error);
+                // Fall back to full page load on navigation failure (404, 403, network error, etc.)
+                window.location.href = targetUrl;
             });
     }
 
