@@ -40,6 +40,13 @@ public sealed class WebRequestContext
     public bool HasPermission(string permission) => Identity.HasPermission(permission);
     public WebFormContext Forms => _formsContext ??= new WebFormContext(this);
 
+    /// <summary>
+    /// True if the request came from the WebLogic JS client (SPA navigation / AJAX form).
+    /// Identified by the "X-Requested-With: WebLogicClient" header the client library sets.
+    /// </summary>
+    public bool IsWebLogicClient =>
+        string.Equals(GetHeader("X-Requested-With"), "WebLogicClient", StringComparison.Ordinal);
+
     public static WebRequestContext? Current => WebRequestContextAccessor.Current;
 
     public string? GetHeader(string key, string? defaultValue = null) =>

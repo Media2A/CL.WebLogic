@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CL.WebLogic.Forms;
 
 namespace CL.WebLogic.Runtime;
 
@@ -95,4 +96,17 @@ public sealed class WebResult
 
     public static object OverlayCommand(string title, string message, string variant = "success", int duration = 2000) =>
         new { type = "overlay", title, message, variant, duration };
+
+    /// <summary>
+    /// Returns a standard JSON validation-error response from a failed form bind:
+    /// { "success": false, "errors": [{ "fieldName", "code", "message" }, ...] }
+    /// Clients can use this uniformly across all endpoints.
+    /// </summary>
+    public static WebResult FormErrors<TModel>(WebFormBindingResult<TModel> result, int statusCode = 200)
+        where TModel : class, new() =>
+        Json(new
+        {
+            success = false,
+            errors = result.Errors.Select(e => new { fieldName = e.FieldName, code = e.Code, message = e.Message })
+        }, statusCode);
 }
