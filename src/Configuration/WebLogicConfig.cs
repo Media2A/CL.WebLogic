@@ -51,6 +51,19 @@ public sealed class SecurityConfig
 {
     public bool EnforceHttps { get; set; } = false;
     public bool TrustForwardedHeaders { get; set; } = true;
+
+    /// <summary>
+    /// Explicit proxy IP addresses that the app will trust to set X-Forwarded-*.
+    /// If both TrustedProxies and TrustedNetworks are empty and TrustForwardedHeaders is true,
+    /// the middleware falls back to loopback + private ranges (RFC1918) with a warning.
+    /// </summary>
+    public string[] TrustedProxies { get; set; } = [];
+
+    /// <summary>
+    /// Explicit proxy network CIDRs (e.g. "172.16.0.0/12") that the app will trust.
+    /// </summary>
+    public string[] TrustedNetworks { get; set; } = [];
+
     public bool EnableDnsbl { get; set; } = false;
     public bool EnableCsrf { get; set; } = true;
     public bool EnableCompression { get; set; } = true;

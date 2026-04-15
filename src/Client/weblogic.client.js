@@ -917,9 +917,9 @@
                 method: settings.method,
                 body: formData,
                 credentials: "same-origin",
-                headers: {
+                headers: csrfHeaders({
                     "X-Requested-With": "WebLogicClient"
-                }
+                })
             }).then(function (response) {
                 const contentType = response.headers.get("content-type") || "";
                 if (contentType.indexOf("application/json") >= 0) {
@@ -1517,6 +1517,18 @@
         }
     });
 
+    function getCsrfToken() {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? (meta.getAttribute("content") || "") : "";
+    }
+
+    function csrfHeaders(extra) {
+        var headers = extra ? Object.assign({}, extra) : {};
+        var token = getCsrfToken();
+        if (token) headers["X-CSRF-Token"] = token;
+        return headers;
+    }
+
     window.WebLogicClient = {
         configure: configure,
         on: on,
@@ -1560,6 +1572,10 @@
         ui: {
             toast: showToast,
             processCommands: processCommands
+        },
+        csrf: {
+            token: getCsrfToken,
+            headers: csrfHeaders
         },
         media: {},
         init: initialize

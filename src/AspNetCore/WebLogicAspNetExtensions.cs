@@ -1,7 +1,9 @@
+using System.Net;
 using CL.WebLogic;
 using CL.WebLogic.AspNetCore;
 using CL.WebLogic.Realtime;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,6 +62,52 @@ namespace Microsoft.AspNetCore.Builder
             webLogic.RealtimeBridge?.AttachBroadcaster(broadcaster);
 
             var config = webLogic.GetConfig();
+            if (config?.Security.TrustForwardedHeaders == true)
+            {
+                var forwardedHeadersOptions = new ForwardedHeadersOptions
+                {
+                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                    ForwardLimit = 2
+                };
+
+                forwardedHeadersOptions.KnownNetworks.Clear();
+                forwardedHeadersOptions.KnownProxies.Clear();
+
+                var proxies = config.Security.TrustedProxies ?? [];
+                var networks = config.Security.TrustedNetworks ?? [];
+                var hasExplicit = proxies.Length > 0 || networks.Length > 0;
+
+                foreach (var proxyIp in proxies)
+                {
+                    if (IPAddress.TryParse(proxyIp.Trim(), out var ip))
+                        forwardedHeadersOptions.KnownProxies.Add(ip);
+                }
+
+                foreach (var cidr in networks)
+                {
+                    if (TryParseIPNetwork(cidr.Trim(), out var network))
+                        forwardedHeadersOptions.KnownNetworks.Add(network);
+                }
+
+                if (!hasExplicit)
+                {
+                    // Safe fallback: trust loopback + RFC1918 private ranges. Logs a warning
+                    // so operators know to lock this down for their actual proxy.
+                    forwardedHeadersOptions.KnownProxies.Add(IPAddress.Loopback);
+                    forwardedHeadersOptions.KnownProxies.Add(IPAddress.IPv6Loopback);
+                    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
+                    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
+                    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("192.168.0.0"), 16));
+
+                    Console.Error.WriteLine(
+                        "[CL.WebLogic] WARNING: TrustForwardedHeaders is enabled but no TrustedProxies or TrustedNetworks are configured. " +
+                        "Falling back to loopback + RFC1918 private ranges. " +
+                        "Set security.trustedProxies or security.trustedNetworks in config to your actual proxy IPs/CIDRs for production.");
+                }
+
+                app.UseForwardedHeaders(forwardedHeadersOptions);
+            }
+
             if (config?.Security.EnableCompression != false)
             {
                 app.UseResponseCompression();
@@ -72,6 +120,20 @@ namespace Microsoft.AspNetCore.Builder
             });
 
             return app;
+        }
+
+        private static bool TryParseIPNetwork(string cidr, out Microsoft.AspNetCore.HttpOverrides.IPNetwork network)
+        {
+            network = new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.None, 0);
+            if (string.IsNullOrWhiteSpace(cidr)) return false;
+            var slash = cidr.IndexOf('/');
+            if (slash < 0) return false;
+            if (!IPAddress.TryParse(cidr[..slash], out var addr)) return false;
+            if (!int.TryParse(cidr[(slash + 1)..], out var prefix)) return false;
+            if (prefix < 0 || prefix > (addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? 128 : 32))
+                return false;
+            network = new Microsoft.AspNetCore.HttpOverrides.IPNetwork(addr, prefix);
+            return true;
         }
     }
 }

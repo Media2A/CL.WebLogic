@@ -26,13 +26,6 @@ public sealed class WebSecurityService
 
     public string GetClientIp(HttpContext context)
     {
-        if (_config.Security.TrustForwardedHeaders)
-        {
-            var forwarded = context.Request.Headers["X-Forwarded-For"].ToString();
-            if (!string.IsNullOrWhiteSpace(forwarded))
-                return forwarded.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
-        }
-
         return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 
@@ -128,13 +121,6 @@ public sealed class WebSecurityService
 
         if (CsrfSafeMethods.Contains(request.Method))
             return null;
-
-        if (request.HttpContext.Request.Headers.ContainsKey("X-Requested-With"))
-        {
-            var header = request.HttpContext.Request.Headers["X-Requested-With"].ToString();
-            if (string.Equals(header, "WebLogicClient", StringComparison.OrdinalIgnoreCase))
-                return null;
-        }
 
         var sessionToken = request.HttpContext.Session.GetString(CsrfSessionKey);
         if (string.IsNullOrWhiteSpace(sessionToken))
