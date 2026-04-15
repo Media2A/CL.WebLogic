@@ -151,6 +151,44 @@ public sealed class WebSecurityService
         return WebResult.Text("CSRF validation failed", StatusCodes.Status403Forbidden);
     }
 
+    /// <summary>
+    /// Writes configured security response headers (CSP, HSTS, X-Content-Type-Options, etc.)
+    /// to the HTTP response. Safe to call multiple times — headers are set idempotently.
+    /// </summary>
+    public void ApplySecurityHeaders(HttpContext context)
+    {
+        var headers = _config.Security.Headers;
+        var response = context.Response.Headers;
+
+        if (headers.EnableCsp && !string.IsNullOrWhiteSpace(headers.CspDirectives))
+        {
+            var headerName = headers.CspReportOnly
+                ? "Content-Security-Policy-Report-Only"
+                : "Content-Security-Policy";
+            response[headerName] = headers.CspDirectives;
+        }
+
+        if (headers.EnableHsts && context.Request.IsHttps)
+        {
+            var hsts = $"max-age={headers.HstsMaxAgeSeconds}";
+            if (headers.HstsIncludeSubdomains) hsts += "; includeSubDomains";
+            if (headers.HstsPreload) hsts += "; preload";
+            response["Strict-Transport-Security"] = hsts;
+        }
+
+        if (headers.EnableContentTypeOptions)
+            response["X-Content-Type-Options"] = "nosniff";
+
+        if (headers.EnableFrameOptions && !string.IsNullOrWhiteSpace(headers.FrameOptions))
+            response["X-Frame-Options"] = headers.FrameOptions;
+
+        if (headers.EnableReferrerPolicy && !string.IsNullOrWhiteSpace(headers.ReferrerPolicy))
+            response["Referrer-Policy"] = headers.ReferrerPolicy;
+
+        if (headers.EnablePermissionsPolicy && !string.IsNullOrWhiteSpace(headers.PermissionsPolicy))
+            response["Permissions-Policy"] = headers.PermissionsPolicy;
+    }
+
     private void PublishBlockedEvent(WebRequestContext request, int statusCode, string reason)
     {
         _context.Events.Publish(new WebRequestBlockedEvent(

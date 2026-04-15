@@ -218,6 +218,8 @@ public sealed class WebLogicRuntime
         httpContext.Response.StatusCode = result.StatusCode;
         httpContext.Response.ContentType = result.ContentType;
 
+        _security.ApplySecurityHeaders(httpContext);
+
         if (result.Headers is not null)
         {
             foreach (var header in result.Headers)

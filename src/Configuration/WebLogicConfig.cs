@@ -56,6 +56,57 @@ public sealed class SecurityConfig
     public bool EnableCompression { get; set; } = true;
     public string[] AllowedMethods { get; set; } = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
     public RateLimitConfig RateLimit { get; set; } = new();
+    public SecurityHeadersConfig Headers { get; set; } = new();
+}
+
+/// <summary>
+/// Response security headers. All are opt-in (disabled by default) so existing apps
+/// aren't broken by framework upgrades. Enable via config per header.
+/// </summary>
+public sealed class SecurityHeadersConfig
+{
+    /// <summary>Content-Security-Policy. When enabled, sent on every HTML response.</summary>
+    public bool EnableCsp { get; set; } = false;
+
+    /// <summary>
+    /// Full CSP directive string. Default is restrictive: scripts/styles from self + inline
+    /// (inline allowed because many apps rely on it — tighten per-app if you don't).
+    /// </summary>
+    public string CspDirectives { get; set; } =
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self'; " +
+        "frame-ancestors 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self'";
+
+    /// <summary>When true, sends Content-Security-Policy-Report-Only instead of enforcing.</summary>
+    public bool CspReportOnly { get; set; } = false;
+
+    /// <summary>Strict-Transport-Security. Only sent on HTTPS requests.</summary>
+    public bool EnableHsts { get; set; } = false;
+    public int HstsMaxAgeSeconds { get; set; } = 31536000; // 1 year
+    public bool HstsIncludeSubdomains { get; set; } = true;
+    public bool HstsPreload { get; set; } = false;
+
+    /// <summary>X-Content-Type-Options: nosniff.</summary>
+    public bool EnableContentTypeOptions { get; set; } = true;
+
+    /// <summary>X-Frame-Options. Valid values: DENY, SAMEORIGIN.</summary>
+    public bool EnableFrameOptions { get; set; } = true;
+    public string FrameOptions { get; set; } = "DENY";
+
+    /// <summary>Referrer-Policy header value.</summary>
+    public bool EnableReferrerPolicy { get; set; } = true;
+    public string ReferrerPolicy { get; set; } = "strict-origin-when-cross-origin";
+
+    /// <summary>Permissions-Policy header — restricts browser features.</summary>
+    public bool EnablePermissionsPolicy { get; set; } = false;
+    public string PermissionsPolicy { get; set; } =
+        "camera=(), microphone=(), geolocation=(), interest-cohort=()";
 }
 
 public sealed class AuthConfig
