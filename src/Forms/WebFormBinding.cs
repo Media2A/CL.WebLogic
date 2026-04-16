@@ -507,9 +507,13 @@ public static class WebFormBinder
             if (options.MinImageHeight > 0 && height < options.MinImageHeight)
                 errors.Add(CreateError(field.Name, "min_image_height", $"{field.Label} is shorter than the required image height."));
         }
-        catch
+        catch (Exception ex)
         {
-            errors.Add(CreateError(field.Name, "image", $"{field.Label} could not be inspected as an image."));
+            // Surface the underlying SkiaSharp error in the form error so it's visible
+            // to the user / in the response. Without this, a stream or codec failure
+            // was being silently masked behind a generic message.
+            var detail = ex.GetType().Name + (string.IsNullOrEmpty(ex.Message) ? "" : $": {ex.Message}");
+            errors.Add(CreateError(field.Name, "image", $"{field.Label} could not be inspected as an image ({detail})."));
         }
     }
 
