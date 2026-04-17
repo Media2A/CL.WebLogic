@@ -70,7 +70,7 @@ namespace Microsoft.AspNetCore.Builder
                     ForwardLimit = 2
                 };
 
-                forwardedHeadersOptions.KnownNetworks.Clear();
+                forwardedHeadersOptions.KnownIPNetworks.Clear();
                 forwardedHeadersOptions.KnownProxies.Clear();
 
                 var proxies = config.Security.TrustedProxies ?? [];
@@ -86,18 +86,16 @@ namespace Microsoft.AspNetCore.Builder
                 foreach (var cidr in networks)
                 {
                     if (TryParseIPNetwork(cidr.Trim(), out var network))
-                        forwardedHeadersOptions.KnownNetworks.Add(network);
+                        forwardedHeadersOptions.KnownIPNetworks.Add(network);
                 }
 
                 if (!hasExplicit)
                 {
-                    // Safe fallback: trust loopback + RFC1918 private ranges. Logs a warning
-                    // so operators know to lock this down for their actual proxy.
                     forwardedHeadersOptions.KnownProxies.Add(IPAddress.Loopback);
                     forwardedHeadersOptions.KnownProxies.Add(IPAddress.IPv6Loopback);
-                    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
-                    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
-                    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("192.168.0.0"), 16));
+                    forwardedHeadersOptions.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
+                    forwardedHeadersOptions.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
+                    forwardedHeadersOptions.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("192.168.0.0"), 16));
 
                     Console.Error.WriteLine(
                         "[CL.WebLogic] WARNING: TrustForwardedHeaders is enabled but no TrustedProxies or TrustedNetworks are configured. " +
@@ -122,9 +120,9 @@ namespace Microsoft.AspNetCore.Builder
             return app;
         }
 
-        private static bool TryParseIPNetwork(string cidr, out Microsoft.AspNetCore.HttpOverrides.IPNetwork network)
+        private static bool TryParseIPNetwork(string cidr, out System.Net.IPNetwork network)
         {
-            network = new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.None, 0);
+            network = new System.Net.IPNetwork(IPAddress.None, 0);
             if (string.IsNullOrWhiteSpace(cidr)) return false;
             var slash = cidr.IndexOf('/');
             if (slash < 0) return false;
@@ -132,7 +130,7 @@ namespace Microsoft.AspNetCore.Builder
             if (!int.TryParse(cidr[(slash + 1)..], out var prefix)) return false;
             if (prefix < 0 || prefix > (addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? 128 : 32))
                 return false;
-            network = new Microsoft.AspNetCore.HttpOverrides.IPNetwork(addr, prefix);
+            network = new System.Net.IPNetwork(addr, prefix);
             return true;
         }
     }
