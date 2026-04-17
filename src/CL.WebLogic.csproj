@@ -20,6 +20,9 @@
     <PackageReference Include="CodeLogic.GitHelper" Version="3.*" />
     <PackageReference Include="CodeLogic.NetUtils" Version="3.*" />
     <PackageReference Include="CodeLogic.StorageS3" Version="3.*" />
+    <!-- SkiaSharp Linux native assets — needed for image validation in Docker containers.
+         Win32 + macOS come transitively from CodeLogic.Common but Linux doesn't. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.*" />
   </ItemGroup>
 
 </Project>
