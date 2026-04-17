@@ -214,4 +214,4 @@ dotnet test tests/CL.WebLogic.Tests/CL.WebLogic.Tests.csproj
 
 ## License
 
-Proprietary — Media2A.
+MIT — see [LICENSE](LICENSE)
