@@ -31,3 +31,4 @@ samples/**/data/**/backups/
 # Keep source-owned sample plugin config, but ignore generated runtime copies
 samples/**/bin/
 samples/**/obj/
+.dotnet-home/
