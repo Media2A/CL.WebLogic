@@ -127,7 +127,11 @@ public sealed class WebSecurityService
             return null;
 
         var submittedToken = request.HttpContext.Request.Headers[CsrfHeader].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(submittedToken))
+        // Only read the form body when the content-type actually advertises it.
+        // ASP.NET's Request.Form accessor throws InvalidOperationException on
+        // bodyless POSTs and on JSON/other content-types, which used to bubble
+        // up as an unhandled 500 for any endpoint that skipped the X-CSRF header.
+        if (string.IsNullOrWhiteSpace(submittedToken) && request.HttpContext.Request.HasFormContentType)
             submittedToken = request.HttpContext.Request.Form.TryGetValue(CsrfFormField, out var formValue) ? formValue.ToString() : null;
 
         if (string.Equals(sessionToken, submittedToken, StringComparison.Ordinal))

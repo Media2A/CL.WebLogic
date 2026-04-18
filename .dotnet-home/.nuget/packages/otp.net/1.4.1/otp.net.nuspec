@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Otp.NET</id>
+    <version>1.4.1</version>
+    <title>Otp.NET</title>
+    <authors>Kyle Spearrin</authors>
+    <license type="file">LICENSE.txt</license>
+    <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
+    <icon>icon.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/kspearrin/Otp.NET</projectUrl>
+    <description>An implementation of TOTP and HOTP which are commonly used for multi factor authentication by using a shared key between the client and the server to generate and verify one time use codes.
+
+For documentation and examples visit the project website on GitHub at https://github.com/kspearrin/Otp.NET</description>
+    <copyright>Kyle Spearrin</copyright>
+    <tags>otp,totp,hotp,2fa,two factor</tags>
+    <repository type="git" url="https://github.com/kspearrin/Otp.NET" commit="83b39e1f2a5bfc87b6d1af15b91bffc6f1638429" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.1" />
+      <group targetFramework="net5.0" />
+      <group targetFramework="net6.0" />
+      <group targetFramework="net7.0" />
+      <group targetFramework="net8.0" />
+      <group targetFramework="net9.0" />
+      <group targetFramework="net10.0" />
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+</package>
