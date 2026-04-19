@@ -194,7 +194,7 @@ public sealed class SecurityHeadersConfig
     [ConfigField(Label = "Permissions-Policy value", InputType = ConfigInputType.Textarea,
         Group = "Response Headers", Order = 56, Collapsed = true)]
     public string PermissionsPolicy { get; set; } =
-        "camera=(), microphone=(), geolocation=(), interest-cohort=()";
+        "camera=(), microphone=(), geolocation=()";
 }
 
 public sealed class AuthConfig
