@@ -139,9 +139,19 @@ public sealed class WebSecurityService
         if (CsrfSafeMethods.Contains(request.Method))
             return null;
 
+        // Fail closed when the session has no CSRF token yet. The previous
+        // behaviour returned "valid" in this case, which made CSRF a
+        // mostly-on control: any first POST from a fresh cookie (or a
+        // session whose token slot hadn't been seeded because no template
+        // with {csrf} had been rendered) bypassed the check entirely.
+        // Now missing = invalid; the caller must GET a page that mints a
+        // token before posting.
         var sessionToken = request.HttpContext.Session.GetString(CsrfSessionKey);
         if (string.IsNullOrWhiteSpace(sessionToken))
-            return null;
+        {
+            PublishBlockedEvent(request, StatusCodes.Status403Forbidden, "csrf_missing_session_token");
+            return WebResult.Text("CSRF validation failed", StatusCodes.Status403Forbidden);
+        }
 
         var submittedToken = request.HttpContext.Request.Headers[CsrfHeader].FirstOrDefault();
         // Only read the form body when the content-type actually advertises it.
