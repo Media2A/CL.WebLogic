@@ -103,11 +103,11 @@ public sealed class WebLogicLibrary : ILibrary
             auditStore);
 
         Registration.SetRuntime(Runtime);
-        // Explorer routes (/api/weblogic/*) include a public demo-signin that
-        // writes any caller-supplied user id into the session, plus public
-        // widget/dashboard persistence and route-discovery endpoints. Those
-        // are fine for local dev but an auth-bypass primitive in production,
-        // so we only mount them when EnableExplorerRoutes is explicitly on.
+        // Explorer routes (/api/weblogic/*) expose route/plugin listings,
+        // widget + dashboard persistence endpoints with no auth, and the
+        // live-event debug page. Fine for local dev, dangerous in
+        // production — mounted only when EnableExplorerRoutes is on.
+        // (The old demo-signin / signout / auth-demo routes are gone now.)
         if (config.Security.EnableExplorerRoutes)
             RegisterBuiltInExplorerRoutes();
         await Runtime.InitializeAsync().ConfigureAwait(false);
@@ -977,42 +977,14 @@ public sealed class WebLogicLibrary : ILibrary
             request.Method
         })), "GET");
 
-        explorerContributor.RegisterApi("/api/weblogic/auth/demo-signin", new WebRouteOptions
-        {
-            Name = "WebLogic Demo Sign-In",
-            Description = "Stores a demo user id in session so auth and SignalR pages can show RBAC behavior.",
-            Tags = ["weblogic", "auth", "demo"]
-        }, async request =>
-        {
-            var form = await request.ReadFormAsync().ConfigureAwait(false);
-            var userId = form.GetValueOrDefault("userId")
-                ?? request.GetQuery("userId")
-                ?? "demo-admin";
-
-            request.SetSessionValue("weblogic.user_id", userId);
-
-            return WebResult.Json(new
-            {
-                signedIn = true,
-                userId
-            });
-        }, "GET", "POST");
-
-        explorerContributor.RegisterApi("/api/weblogic/auth/signout", new WebRouteOptions
-        {
-            Name = "WebLogic Demo Sign-Out",
-            Description = "Clears demo auth session values.",
-            Tags = ["weblogic", "auth", "demo"]
-        }, request =>
-        {
-            request.SetSessionValue("weblogic.user_id", null);
-            request.SetSessionValue("weblogic.access_groups", null);
-
-            return Task.FromResult(WebResult.Json(new
-            {
-                signedIn = false
-            }));
-        }, "GET", "POST");
+        // NOTE: demo-signin / signout / /weblogic/auth-demo removed on purpose.
+        // They were a tutorial aid that let any caller write an arbitrary user
+        // id into the session, which downstream auth code then trusted as the
+        // caller's identity. Real apps use the host's IWebIdentityStore flow
+        // (FragHunt.Shared.Identity.FragHuntMySqlIdentityStore in FragHunt's
+        // case). Don't re-introduce these unless you also gate them behind a
+        // non-default config flag AND strip them before the app is reachable
+        // from the public internet.
 
         explorerContributor.RegisterPage("/weblogic/live", new WebRouteOptions
         {
@@ -1020,13 +992,6 @@ public sealed class WebLogicLibrary : ILibrary
             Description = "Live event page powered by WebLogic realtime events and SignalR.",
             Tags = ["weblogic", "live", "signalr"]
         }, _ => Task.FromResult(WebResult.Html(BuildLiveEventsHtml())), "GET");
-
-        explorerContributor.RegisterPage("/weblogic/auth-demo", new WebRouteOptions
-        {
-            Name = "WebLogic Auth Demo",
-            Description = "Demo page for session-based sign in and RBAC behavior.",
-            Tags = ["weblogic", "auth", "demo"]
-        }, request => Task.FromResult(WebResult.Html(BuildAuthDemoHtml(request))), "GET");
     }
 
     private string BuildApiExplorerHtml()
@@ -1313,7 +1278,6 @@ public sealed class WebLogicLibrary : ILibrary
                         <div class="hero-actions">
                             <a class="btn btn-warning fw-semibold" href="/">Back home</a>
                             <a class="btn btn-outline-light" href="/api/weblogic/events/recent">Recent events API</a>
-                            <a class="btn btn-outline-light" href="/weblogic/auth-demo">Auth demo</a>
                         </div>
                         <div class="mt-3">
                             <span class="hero-badge">SignalR: <span data-signalr-status>connecting</span></span>
@@ -1365,75 +1329,4 @@ public sealed class WebLogicLibrary : ILibrary
         return buffer.ToArray();
     }
 
-    private static string BuildAuthDemoHtml(WebRequestContext request)
-    {
-        var currentUser = string.IsNullOrWhiteSpace(request.UserId) ? "anonymous" : request.UserId;
-        var currentGroups = request.AccessGroups.Count == 0 ? "(none)" : string.Join(", ", request.AccessGroups);
-
-        return
-            $$"""
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>CL.WebLogic Auth Demo</title>
-                <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
-                <link rel="stylesheet" href="/assets/site.css">
-            </head>
-            <body>
-                <div class="site-shell">
-                    <section class="hero-panel">
-                        <p class="eyebrow">CL.WebLogic Auth</p>
-                        <h1 class="hero-title">Session and RBAC demo</h1>
-                        <p class="hero-copy">Use the built-in demo endpoints to sign in as a database-backed user and see access groups flow into pages, APIs, and SignalR.</p>
-                        <div class="hero-actions">
-                            <a class="btn btn-warning fw-semibold" href="/">Back home</a>
-                            <a class="btn btn-outline-light" href="/api/weblogic/auth/me">Current user API</a>
-                            <a class="btn btn-outline-light" href="/api/plugins/secure">Secure API</a>
-                        </div>
-                    </section>
-                    <section class="section-wrap">
-                        <div class="row g-4">
-                            <div class="col-lg-6">
-                                <div class="demo-panel h-100">
-                                    <p class="section-title">Current session</p>
-                                    <p class="section-subtitle">This reflects the same request identity WebLogic uses for RBAC checks.</p>
-                                    <div class="mt-3">
-                                        <p class="mb-2">User: <code data-current-user>{{currentUser}}</code></p>
-                                        <p class="mb-2">Groups: <code data-current-groups>{{currentGroups}}</code></p>
-                                        <p class="mb-0">Authenticated: <code>{{request.IsAuthenticated}}</code></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="demo-panel h-100">
-                                    <p class="section-title">Demo actions</p>
-                                    <p class="section-subtitle">This is intentionally lightweight foundation code, not a full login product yet.</p>
-                                    <form class="d-grid gap-3 mt-3" data-auth-demo-form>
-                                        <input class="form-control form-control-lg" type="text" name="userId" value="demo-admin" placeholder="demo-admin">
-                                        <div class="d-flex gap-2 flex-wrap">
-                                            <button class="btn btn-warning fw-semibold" type="submit">Sign in demo user</button>
-                                            <button class="btn btn-outline-light" type="button" data-auth-signout>Sign out</button>
-                                        </div>
-                                    </form>
-                                    <div class="code-shell mt-3">
-                                        <pre class="mb-0"><code>GET /api/weblogic/auth/me&#10;POST /api/weblogic/auth/demo-signin&#10;POST /api/weblogic/auth/signout</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <footer class="footer-bar d-flex flex-wrap justify-content-between gap-3">
-                        <span>Current request path: {{request.Path}}</span>
-                        <span data-current-year></span>
-                    </footer>
-                </div>
-                <script src="/assets/vendor/jquery/jquery-4.0.0.min.js"></script>
-                <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-                <script src="/assets/site.js"></script>
-            </body>
-            </html>
-            """;
-    }
 }
