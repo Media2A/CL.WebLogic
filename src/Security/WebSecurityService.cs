@@ -87,8 +87,25 @@ public sealed class WebSecurityService
 
     public WebResult? AuthorizeRoute(WebRequestContext request, WebRouteDefinition route)
     {
-        if (route.AllowAnonymous || route.RequiredAccessGroups.Length == 0)
-            return null;
+        // Anonymous-allowed routes skip every check below.
+        if (route.AllowAnonymous) return null;
+
+        // A route is "protected" when the author wrote AllowAnonymous = false.
+        // Require authentication even if no specific access groups were set.
+        // Historically this branch returned null (i.e. "allowed") when the
+        // RequiredAccessGroups list was empty, which meant AllowAnonymous =
+        // false was silently meaningless unless groups were also populated.
+        // That footgun made the previously-exposed /api/weblogic/auth/demo-signin
+        // into an auth-bypass primitive and would do the same for any future
+        // route that relied on route metadata alone.
+        if (!request.IsAuthenticated)
+        {
+            PublishBlockedEvent(request, StatusCodes.Status401Unauthorized, "auth:required");
+            return WebResult.Text("Unauthorized", StatusCodes.Status401Unauthorized);
+        }
+
+        if (route.RequiredAccessGroups.Length == 0)
+            return null; // authenticated is enough; no group restrictions set
 
         if (request.HasAnyAccessGroup(route.RequiredAccessGroups))
             return null;

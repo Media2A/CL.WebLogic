@@ -102,6 +102,19 @@ public sealed class SecurityConfig
         Group = "Security", Order = 22)]
     public bool EnableDnsbl { get; set; } = false;
 
+    /// <summary>
+    /// When true, the built-in explorer / demo-signin / widget-persistence
+    /// debug endpoints under /api/weblogic/* are registered. They expose
+    /// route listings, let anyone set a session user id via
+    /// /api/weblogic/auth/demo-signin, and write widget/dashboard state
+    /// with no auth — all fine for local dev, dangerous for production.
+    /// Default <c>false</c> so production is safe out of the box.
+    /// </summary>
+    [ConfigField(Label = "Enable Explorer Routes", Description =
+        "Development-only debug / demo endpoints under /api/weblogic/*. Leave OFF in production — /api/weblogic/auth/demo-signin otherwise lets any caller impersonate an arbitrary user id.",
+        RequiresRestart = true, Group = "Security", Order = 25)]
+    public bool EnableExplorerRoutes { get; set; } = false;
+
     [ConfigField(Label = "Enable CSRF Protection", Description = "Require CSRF tokens on state-changing requests.",
         Group = "Security", Order = 23)]
     public bool EnableCsrf { get; set; } = true;

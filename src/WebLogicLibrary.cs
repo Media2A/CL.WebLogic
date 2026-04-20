@@ -103,7 +103,13 @@ public sealed class WebLogicLibrary : ILibrary
             auditStore);
 
         Registration.SetRuntime(Runtime);
-        RegisterBuiltInExplorerRoutes();
+        // Explorer routes (/api/weblogic/*) include a public demo-signin that
+        // writes any caller-supplied user id into the session, plus public
+        // widget/dashboard persistence and route-discovery endpoints. Those
+        // are fine for local dev but an auth-bypass primitive in production,
+        // so we only mount them when EnableExplorerRoutes is explicitly on.
+        if (config.Security.EnableExplorerRoutes)
+            RegisterBuiltInExplorerRoutes();
         await Runtime.InitializeAsync().ConfigureAwait(false);
     }
 
