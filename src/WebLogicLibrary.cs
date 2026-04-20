@@ -103,11 +103,30 @@ public sealed class WebLogicLibrary : ILibrary
             auditStore);
 
         Registration.SetRuntime(Runtime);
+
+        // Runtime asset: the WebLogic client-side JS. Real pages depend on
+        // this (popstate, form enhancements, realtime bridge), so it must
+        // mount regardless of EnableExplorerRoutes.
+        var runtimeContributor = Registration.CreateContext(new WebContributorDescriptor
+        {
+            Id = "weblogic.runtime",
+            Name = "CL.WebLogic Runtime",
+            Kind = "Library",
+            Description = "Runtime assets the library ships and pages depend on."
+        });
+        runtimeContributor.RegisterApi("/weblogic/client/weblogic.client.js", new WebRouteOptions
+        {
+            Name = "WebLogic Client Runtime",
+            Description = "Serves the CL.WebLogic.Client browser runtime owned by the library itself.",
+            Tags = ["weblogic", "client", "assets"]
+        }, _ => Task.FromResult(WebResult.Bytes(
+            LoadEmbeddedClientRuntime(),
+            "application/javascript; charset=utf-8")), "GET");
+
         // Explorer routes (/api/weblogic/*) expose route/plugin listings,
         // widget + dashboard persistence endpoints with no auth, and the
         // live-event debug page. Fine for local dev, dangerous in
         // production — mounted only when EnableExplorerRoutes is on.
-        // (The old demo-signin / signout / auth-demo routes are gone now.)
         if (config.Security.EnableExplorerRoutes)
             RegisterBuiltInExplorerRoutes();
         await Runtime.InitializeAsync().ConfigureAwait(false);
@@ -429,14 +448,8 @@ public sealed class WebLogicLibrary : ILibrary
                 .ToArray()
         })), "GET");
 
-        explorerContributor.RegisterApi("/weblogic/client/weblogic.client.js", new WebRouteOptions
-        {
-            Name = "WebLogic Client Runtime",
-            Description = "Serves the CL.WebLogic.Client browser runtime owned by the library itself.",
-            Tags = ["weblogic", "client", "assets"]
-        }, _ => Task.FromResult(WebResult.Bytes(
-            LoadEmbeddedClientRuntime(),
-            "application/javascript; charset=utf-8")), "GET");
+        // client runtime JS is registered unconditionally in OnInitializeAsync —
+        // it's a real runtime asset pages depend on, not an explorer/debug feature.
 
         explorerContributor.RegisterApi("/api/weblogic/forms/options", new WebRouteOptions
         {
