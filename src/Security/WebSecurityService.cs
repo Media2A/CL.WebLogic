@@ -104,14 +104,26 @@ public sealed class WebSecurityService
             return WebResult.Text("Unauthorized", StatusCodes.Status401Unauthorized);
         }
 
-        if (route.RequiredAccessGroups.Length == 0)
-            return null; // authenticated is enough; no group restrictions set
+        // Group-level gate (legacy). Satisfied → fall through to the
+        // permission-level gate below (if any); otherwise we stop here.
+        if (route.RequiredAccessGroups.Length > 0
+            && !request.HasAnyAccessGroup(route.RequiredAccessGroups))
+        {
+            PublishBlockedEvent(request, StatusCodes.Status403Forbidden, $"rbac:{string.Join(",", route.RequiredAccessGroups)}");
+            return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
+        }
 
-        if (request.HasAnyAccessGroup(route.RequiredAccessGroups))
-            return null;
+        // Permission-level gate — routed through the same resolver as
+        // request.HasPermission, which the app wires up to its wildcard-aware
+        // permission cache. A super-admin role granted "*" passes every check.
+        if (!string.IsNullOrWhiteSpace(route.RequiredPermission)
+            && !request.HasPermission(route.RequiredPermission))
+        {
+            PublishBlockedEvent(request, StatusCodes.Status403Forbidden, $"perm:{route.RequiredPermission}");
+            return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
+        }
 
-        PublishBlockedEvent(request, StatusCodes.Status403Forbidden, $"rbac:{string.Join(",", route.RequiredAccessGroups)}");
-        return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
+        return null;
     }
 
     private const string CsrfSessionKey = "weblogic.csrf_token";

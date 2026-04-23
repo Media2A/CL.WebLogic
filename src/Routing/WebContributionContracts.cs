@@ -22,6 +22,17 @@ public sealed class WebRouteOptions
     public string Description { get; init; } = string.Empty;
     public string[] Tags { get; init; } = [];
     public string[] RequiredAccessGroups { get; init; } = [];
+
+    /// <summary>
+    /// Optional fine-grained permission the caller must hold to reach the route.
+    /// Evaluated AFTER <see cref="AllowAnonymous"/> and <see cref="RequiredAccessGroups"/>;
+    /// an empty / null value disables the check. Supports the wildcard tokens
+    /// the app's permission resolver understands (e.g. <c>*</c>, <c>admin.*</c>)
+    /// because the gate runs through the same <c>request.HasPermission</c>
+    /// path the template engine uses.
+    /// </summary>
+    public string? RequiredPermission { get; init; }
+
     public bool AllowAnonymous { get; init; } = true;
     public IWebMiddleware[]? Middleware { get; init; }
 }
@@ -95,6 +106,7 @@ public sealed class WebRouteDescriptor
     public required string Description { get; init; }
     public required string[] Tags { get; init; }
     public required string[] RequiredAccessGroups { get; init; }
+    public string? RequiredPermission { get; init; }
     public required bool AllowAnonymous { get; init; }
 }
 

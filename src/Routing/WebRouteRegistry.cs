@@ -23,6 +23,7 @@ public sealed class WebRouteDefinition
     public required string Description { get; init; }
     public required string[] Tags { get; init; }
     public required string[] RequiredAccessGroups { get; init; }
+    public string? RequiredPermission { get; init; }
     public required bool AllowAnonymous { get; init; }
     public IWebMiddleware[] Middleware { get; init; } = [];
 }
@@ -64,6 +65,7 @@ public sealed class WebRouteRegistry
             Description = options.Description,
             Tags = options.Tags,
             RequiredAccessGroups = options.RequiredAccessGroups,
+            RequiredPermission = string.IsNullOrWhiteSpace(options.RequiredPermission) ? null : options.RequiredPermission,
             AllowAnonymous = options.AllowAnonymous,
             Middleware = options.Middleware ?? []
         };
@@ -86,6 +88,7 @@ public sealed class WebRouteRegistry
             Description = options.Description,
             Tags = options.Tags,
             RequiredAccessGroups = options.RequiredAccessGroups,
+            RequiredPermission = string.IsNullOrWhiteSpace(options.RequiredPermission) ? null : options.RequiredPermission,
             AllowAnonymous = options.AllowAnonymous
         };
     }
@@ -140,6 +143,7 @@ public sealed class WebRouteRegistry
                 Description = route.Description,
                 Tags = route.Tags,
                 RequiredAccessGroups = route.RequiredAccessGroups,
+                RequiredPermission = route.RequiredPermission,
                 AllowAnonymous = route.AllowAnonymous
             })
             .OrderBy(static route => route.Path, StringComparer.OrdinalIgnoreCase)
