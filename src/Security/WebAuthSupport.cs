@@ -1,20 +1,16 @@
-using System.Security.Claims;
-using CL.WebLogic.Configuration;
-using CL.WebLogic.Runtime;
-using Microsoft.AspNetCore.Http;
-
 namespace CL.WebLogic.Security;
 
-public interface IWebAuthResolver
-{
-    Task<WebRequestIdentity> ResolveIdentityAsync(HttpContext httpContext);
-}
-
+/// <summary>
+/// Resolves a user profile from a persistent store. Used by the DB-backed
+/// session store at sign-in time to fetch canonical access groups for the
+/// session row.
+/// </summary>
 public interface IWebIdentityStore
 {
     Task<WebIdentityProfile?> GetIdentityAsync(string userId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Validates raw credentials and returns the resolved profile on success.</summary>
 public interface IWebCredentialValidator
 {
     Task<WebIdentityProfile?> ValidateCredentialsAsync(
@@ -40,70 +36,4 @@ public sealed class WebIdentityProfile
     public bool IsActive { get; init; } = true;
     public IReadOnlyCollection<string> AccessGroups { get; init; } = [];
     public IReadOnlyCollection<string> Permissions { get; init; } = [];
-}
-
-public sealed class DefaultWebAuthResolver : IWebAuthResolver
-{
-    private readonly AuthConfig _config;
-    private readonly IWebIdentityStore? _identityStore;
-
-    public DefaultWebAuthResolver(AuthConfig config, IWebIdentityStore? identityStore = null)
-    {
-        _config = config;
-        _identityStore = identityStore;
-    }
-
-    public async Task<WebRequestIdentity> ResolveIdentityAsync(HttpContext httpContext)
-    {
-        var accessGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var claim in httpContext.User.Claims)
-        {
-            if (claim.Type is ClaimTypes.Role or ClaimTypes.GroupSid or "role" or "roles" or "group" or "groups" or "access_group")
-                AddValues(accessGroups, claim.Value);
-        }
-
-        if (_config.AllowSessionAccessGroups)
-            AddValues(accessGroups, httpContext.Session.GetString("weblogic.access_groups"));
-
-        if (_config.AllowHeaderAccessGroups)
-            AddValues(accessGroups, httpContext.Request.Headers["X-WebLogic-AccessGroups"].ToString());
-
-        var userId =
-            httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            httpContext.User.FindFirstValue("sub");
-
-        if (string.IsNullOrWhiteSpace(userId) && _config.AllowSessionUserId)
-            userId = httpContext.Session.GetString("weblogic.user_id");
-
-        if (string.IsNullOrWhiteSpace(userId) && _config.AllowHeaderUserId)
-            userId = httpContext.Request.Headers["X-WebLogic-UserId"].ToString();
-
-        // Only hit the identity store DB if we have no session data at all
-        if (!string.IsNullOrWhiteSpace(userId) && _identityStore is not null && accessGroups.Count == 0)
-        {
-            var profile = await _identityStore.GetIdentityAsync(userId).ConfigureAwait(false);
-            if (profile is not null && profile.IsActive)
-            {
-                userId = profile.UserId;
-                foreach (var group in profile.AccessGroups)
-                    accessGroups.Add(group);
-            }
-        }
-
-        // Permissions: check session first (legacy), then let the identity resolve from profile
-        var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddValues(permissions, httpContext.Session.GetString("weblogic.permissions"));
-
-        return new WebRequestIdentity(userId, accessGroups, permissions);
-    }
-
-    private static void AddValues(ISet<string> values, string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return;
-
-        foreach (var part in raw.Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            values.Add(part);
-    }
 }

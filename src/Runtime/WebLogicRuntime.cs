@@ -189,12 +189,10 @@ public sealed class WebLogicRuntime
 
     private async Task<WebRequestContext> CreateContextAsync(HttpContext httpContext)
     {
-        var session = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (httpContext.Session.IsAvailable)
-        {
-            foreach (var key in httpContext.Session.Keys)
-                session[key] = httpContext.Session.GetString(key) ?? string.Empty;
-        }
+        // Resolve the DB-backed session first. The resolver stashes the record on
+        // HttpContext.Items so CSRF, sign-in rotation, and sign-out can read it
+        // without another round trip. No session → anonymous request.
+        await _security.ResolveSessionAsync(httpContext).ConfigureAwait(false);
 
         var identity = await _security.ResolveIdentityAsync(httpContext).ConfigureAwait(false);
 
@@ -208,10 +206,13 @@ public sealed class WebLogicRuntime
             Headers = httpContext.Request.Headers.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase),
             Query = httpContext.Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase),
             Cookies = httpContext.Request.Cookies.ToDictionary(k => k.Key, v => v.Value, StringComparer.OrdinalIgnoreCase),
-            Session = session,
+            Session = EmptySession,
             Identity = identity
         };
     }
+
+    private static readonly IReadOnlyDictionary<string, string> EmptySession =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     private async Task WriteAsync(HttpContext httpContext, WebRequestContext request, WebResult result)
     {
@@ -219,6 +220,7 @@ public sealed class WebLogicRuntime
         httpContext.Response.ContentType = result.ContentType;
 
         _security.ApplySecurityHeaders(httpContext);
+        _security.FlushSessionCookie(httpContext);
 
         if (result.Headers is not null)
         {

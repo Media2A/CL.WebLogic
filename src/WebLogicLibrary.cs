@@ -30,7 +30,8 @@ public sealed class WebLogicLibrary : ILibrary
     };
 
     private MemoryCache? _cache;
-    private IWebAuthResolver? _authResolver;
+    private IWebSessionStore? _configuredSessionStore;
+    private IWebPermissionResolver? _configuredPermissionResolver;
     private ThemeManager? _themeManager;
     private PluginManager? _attachedPluginManager;
     private IWebIdentityStore? _configuredIdentityStore;
@@ -47,6 +48,8 @@ public sealed class WebLogicLibrary : ILibrary
     public WebLogicRegistrationApi Registration { get; }
     public WebLogicRealtimeBridge? RealtimeBridge { get; private set; }
     public WebLogicRuntime? Runtime { get; private set; }
+    public IWebSessionStore? SessionStore { get; private set; }
+    public IWebPermissionResolver? PermissionResolver { get; private set; }
 
     public WebLogicLibrary()
     {
@@ -83,14 +86,13 @@ public sealed class WebLogicLibrary : ILibrary
 
         var themeManager = new ThemeManager(context, config, Widgets, widgetSettingsStore);
         _themeManager = themeManager;
-        var authResolver = _authResolver is null || _authResolver is DefaultWebAuthResolver
-            ? new DefaultWebAuthResolver(config.Auth, IdentityStore)
-            : _authResolver;
 
         RealtimeBridge = new WebLogicRealtimeBridge(new WebLogicRealtimeBuffer());
         RealtimeBridge.RegisterDefaultMappings(context.Events);
 
-        var security = new WebSecurityService(context, config, authResolver);
+        SessionStore = _configuredSessionStore;
+        PermissionResolver = _configuredPermissionResolver;
+        var security = new WebSecurityService(context, config, SessionStore, PermissionResolver);
         themeManager.SetSecurityService(security);
         var auditStore = _configuredAuditStore ?? NullWebRequestAuditStore.Instance;
 
@@ -151,6 +153,8 @@ public sealed class WebLogicLibrary : ILibrary
         RealtimeBridge = null;
         Runtime = null;
         IdentityStore = null;
+        SessionStore = null;
+        PermissionResolver = null;
         DashboardLayouts = null;
         WidgetSettingsStore = null;
         _themeManager = null;
@@ -172,14 +176,21 @@ public sealed class WebLogicLibrary : ILibrary
         RealtimeBridge?.Dispose();
         RealtimeBridge = null;
         IdentityStore = null;
+        SessionStore = null;
+        PermissionResolver = null;
         DashboardLayouts = null;
         WidgetSettingsStore = null;
         _themeManager = null;
     }
 
-    public void UseAuthResolver(IWebAuthResolver authResolver)
+    public void UseSessionStore(IWebSessionStore sessionStore)
     {
-        _authResolver = authResolver ?? throw new ArgumentNullException(nameof(authResolver));
+        _configuredSessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+    }
+
+    public void UsePermissionResolver(IWebPermissionResolver permissionResolver)
+    {
+        _configuredPermissionResolver = permissionResolver ?? throw new ArgumentNullException(nameof(permissionResolver));
     }
 
     public void UseIdentityStore(IWebIdentityStore identityStore)
