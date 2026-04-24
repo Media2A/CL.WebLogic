@@ -51,6 +51,13 @@ public sealed class WebLogicLibrary : ILibrary
     public IWebSessionStore? SessionStore { get; private set; }
     public IWebPermissionResolver? PermissionResolver { get; private set; }
 
+    /// <summary>
+    /// Security service — surfaced for the app's sign-in / sign-out handlers to
+    /// call <c>RotateAfterSignInAsync</c> / <c>SignOutAsync</c>. Null before
+    /// <c>OnInitializeAsync</c>.
+    /// </summary>
+    public WebSecurityService? Security { get; private set; }
+
     public WebLogicLibrary()
     {
         Registration = new WebLogicRegistrationApi(Routes, Widgets);
@@ -93,6 +100,7 @@ public sealed class WebLogicLibrary : ILibrary
         SessionStore = _configuredSessionStore;
         PermissionResolver = _configuredPermissionResolver;
         var security = new WebSecurityService(context, config, SessionStore, PermissionResolver);
+        Security = security;
         themeManager.SetSecurityService(security);
         var auditStore = _configuredAuditStore ?? NullWebRequestAuditStore.Instance;
 
@@ -155,6 +163,7 @@ public sealed class WebLogicLibrary : ILibrary
         IdentityStore = null;
         SessionStore = null;
         PermissionResolver = null;
+        Security = null;
         DashboardLayouts = null;
         WidgetSettingsStore = null;
         _themeManager = null;
@@ -178,6 +187,7 @@ public sealed class WebLogicLibrary : ILibrary
         IdentityStore = null;
         SessionStore = null;
         PermissionResolver = null;
+        Security = null;
         DashboardLayouts = null;
         WidgetSettingsStore = null;
         _themeManager = null;
