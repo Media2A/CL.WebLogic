@@ -102,7 +102,8 @@ public sealed record WebSessionRecord
     /// </summary>
     public IReadOnlyDictionary<string, string> AppData { get; init; } = EmptyAppData;
 
-    internal static readonly IReadOnlyDictionary<string, string> EmptyAppData =
+    /// <summary>Shared empty AppData instance; use as a sentinel for "no session metadata".</summary>
+    public static readonly IReadOnlyDictionary<string, string> EmptyAppData =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     public bool IsExpired(DateTime nowUtc) => ExpiresAtUtc <= nowUtc;
