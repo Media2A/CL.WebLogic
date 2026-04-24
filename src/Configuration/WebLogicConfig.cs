@@ -15,7 +15,6 @@ public sealed class WebLogicConfig : ConfigModelBase
 
     public ThemeConfig Theme { get; set; } = new();
     public SecurityConfig Security { get; set; } = new();
-    public AuthConfig Auth { get; set; } = new();
     public SessionConfig Session { get; set; } = new();
     public StorageConfig Storage { get; set; } = new();
     public WidgetConfig Widgets { get; set; } = new();
@@ -209,28 +208,6 @@ public sealed class SecurityHeadersConfig
         Group = "Response Headers", Order = 56, Collapsed = true)]
     public string PermissionsPolicy { get; set; } =
         "camera=(), microphone=(), geolocation=()";
-}
-
-public sealed class AuthConfig
-{
-    // Header-based identity bootstrap (`X-WebLogic-UserId`, `X-WebLogic-AccessGroups`) is a
-    // dev/testing affordance. If left enabled behind a proxy that doesn't strip the headers,
-    // any unauthenticated client can claim any user id and any access group (including admin).
-    // Defaults are OFF — opt in explicitly per environment.
-    [ConfigField(Label = "Allow Header User ID", Description = "Read user ID from X-WebLogic-UserId (dev/testing only — unauthenticated impersonation if exposed).",
-        Group = "Auth", Order = 60, Collapsed = true)]
-    public bool AllowHeaderUserId { get; set; } = false;
-
-    [ConfigField(Label = "Allow Header Access Groups", Description = "Read access groups from X-WebLogic-AccessGroups (dev/testing only — unauthenticated role assumption if exposed).",
-        Group = "Auth", Order = 61, Collapsed = true)]
-    public bool AllowHeaderAccessGroups { get; set; } = false;
-
-    [ConfigField(Label = "Allow Session User ID", Description = "Read user ID from session (standard).",
-        Group = "Auth", Order = 62, Collapsed = true)]
-    public bool AllowSessionUserId { get; set; } = true;
-
-    [ConfigField(Label = "Allow Session Access Groups", Group = "Auth", Order = 63, Collapsed = true)]
-    public bool AllowSessionAccessGroups { get; set; } = true;
 }
 
 public sealed class RateLimitConfig

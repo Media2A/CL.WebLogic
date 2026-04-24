@@ -207,13 +207,6 @@ public sealed class WebRequestIdentity
     private readonly HashSet<string> _accessGroups;
     private readonly HashSet<string> _permissions;
 
-    /// <summary>
-    /// Optional external permission resolver. When set, HasPermission checks this
-    /// before falling back to the built-in permissions set.
-    /// Apps can use this to resolve permissions from a server-side cache based on access groups.
-    /// </summary>
-    public static Func<IEnumerable<string>, string, bool>? ExternalPermissionResolver { get; set; }
-
     public WebRequestIdentity(string? userId, IEnumerable<string>? accessGroups, IEnumerable<string>? permissions = null)
     {
         UserId = string.IsNullOrWhiteSpace(userId) ? string.Empty : userId;
@@ -238,13 +231,8 @@ public sealed class WebRequestIdentity
     public bool HasAnyAccessGroup(IEnumerable<string> accessGroups) =>
         accessGroups.Any(HasAccessGroup);
 
-    public bool HasPermission(string permission)
-    {
-        if (_permissions.Contains(permission))
-            return true;
-
-        return ExternalPermissionResolver?.Invoke(_accessGroups, permission) ?? false;
-    }
+    public bool HasPermission(string permission) =>
+        _permissions.Contains(permission);
 
     public bool HasAnyPermission(IEnumerable<string> permissions) =>
         permissions.Any(HasPermission);

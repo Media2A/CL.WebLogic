@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file. Going forward, versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-04-24
+
+DB-backed sessions. Breaking. This tag ships the library half of the session
+overhaul — steps 1 through 3. The app-side integration (a persistent
+`IWebSessionStore`) lands separately; without one, the library has no identity
+for any request.
+
+### Added
+- `IWebSessionStore` contract with `Get`/`Create`/`Touch`/`Revoke`/`RevokeAllForUser`/`SweepExpired`/`UpdateCsrfToken`. Implementations are expected to hash the client-visible token before persistence and enforce a per-user session cap by evicting oldest rows.
+- `IWebPermissionResolver` contract — returns the effective permission set for a user, invalidatable externally when grants change.
+- `WebSessionRecord` + `WebSessionCreate` records, and `WebSessionFeature` (stashed on `HttpContext.Items`).
+- `SessionConfig` wired onto `WebLogicConfig.Session`: cookie name/domain/secure/SameSite, idle timeout (default 120 min), remember-me days (default 30), max concurrent sessions (default 3), IP-binding toggle, sweeper interval.
+- `WebSecurityService.ResolveSessionAsync` / `ResolveIdentityAsync` / `RotateAfterSignInAsync` / `SignOutAsync` / `FlushSessionCookie`. Session rotation on sign-in, revocation on sign-out.
+- `WebLogicLibrary.UseSessionStore(...)` / `UsePermissionResolver(...)` and public `SessionStore` / `PermissionResolver` properties.
+- 8 contract-pinning tests against a minimal in-memory `IWebSessionStore` implementation (doubles as a reference for real stores).
+
+### Changed
+- Identity is resolved from the session store only. CSRF tokens live on the session row; validation uses `CryptographicOperations.FixedTimeEquals`. Session cookie clears itself when the inbound cookie is stale / expired / fails IP binding.
+- `WebLogicRealtimeHub` authenticates via the session cookie and store — no session fallback, no query-string `?userId=` / `?accessGroups=`.
+- `WebLogicRuntime.CreateContextAsync` calls `ResolveSessionAsync` before building the request context; `WriteAsync` calls `FlushSessionCookie` on the response path.
+
+### Removed (breaking)
+- `IWebAuthResolver`, `DefaultWebAuthResolver`, `WebLogicLibrary.UseAuthResolver`. Identity is a `WebSecurityService` concern now.
+- `AuthConfig` (`AllowHeaderUserId`, `AllowHeaderAccessGroups`, `AllowSessionUserId`, `AllowSessionAccessGroups`) and `WebLogicConfig.Auth`. The library no longer has any code path that trusts a request header for identity.
+- `WebRequestIdentity.ExternalPermissionResolver` static. Apps wire up permissions through `IWebPermissionResolver` instead.
+
+### Migration notes for consumers
+1. Implement `IWebSessionStore` (and register it via `weblogic.UseSessionStore(...)`). Sessions are now your responsibility to persist — pick any backend (SQL, Redis, in-memory for dev).
+2. Implement `IWebPermissionResolver` if you rely on permission gates. Register via `weblogic.UsePermissionResolver(...)`. Cache internally and call your own invalidation on role changes.
+3. Sign-in flow now calls `_security.RotateAfterSignInAsync(httpContext, userId, accessGroups, rememberMe)` — the return value holds the cookie token and CSRF token. Sign-out calls `_security.SignOutAsync(httpContext)`.
+4. Remove any `WebRequestIdentity.ExternalPermissionResolver = ...` lines in startup.
+5. Remove any `config.Auth.Allow*` settings from persisted configuration.
+
 ## [0.1.1] - 2026-04-24
 
 Security release — two unauthenticated auth-bypass primitives closed.
