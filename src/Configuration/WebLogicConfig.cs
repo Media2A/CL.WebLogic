@@ -16,6 +16,7 @@ public sealed class WebLogicConfig : ConfigModelBase
     public ThemeConfig Theme { get; set; } = new();
     public SecurityConfig Security { get; set; } = new();
     public AuthConfig Auth { get; set; } = new();
+    public SessionConfig Session { get; set; } = new();
     public StorageConfig Storage { get; set; } = new();
     public WidgetConfig Widgets { get; set; } = new();
 
