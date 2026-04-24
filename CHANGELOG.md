@@ -1,5 +1,21 @@
 # Changelog
 
+All notable changes to this project will be documented in this file. Going forward, versions follow [Semantic Versioning](https://semver.org/).
+
+## [0.1.0] - 2026-04-24
+
+First tagged release — packaging and CI groundwork.
+
+### Added
+- NuGet package metadata on `src/CL.WebLogic.csproj` (`PackageId`, `Version`, `Authors`, `Description`, `RepositoryUrl`, `License`, `PackageReadmeFile`).
+- XML documentation generation (`GenerateDocumentationFile`), with CS1591 suppressed until public API is fully documented.
+- Repo-root `.editorconfig` defining formatting, file-scoped namespaces, and private-field naming conventions.
+- GitHub Actions `ci.yml`: builds + runs tests on push/PR to `main`; packs on `v*` tags and uploads the `.nupkg` as a build artifact. NuGet publish step is included but commented pending `NUGET_API_KEY`.
+- `.gitignore` entries for `artifacts/`, `*.nupkg`, `*.snupkg`.
+
+### Notes
+- No source-code behavior changes in this release. Everything that worked before still works — this release exists to make the library packageable and give it a versioning baseline.
+
 ## 2026-04-07 Toolkit Snapshot
 
 Current `CL.WebLogic` state before the cleanup/consolidation branch:
