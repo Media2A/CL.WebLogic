@@ -13,8 +13,8 @@ public sealed class SessionConfig
         Group = "Session", Order = 80)]
     public string CookieName { get; set; } = "fh_sid";
 
-    [ConfigField(Label = "Cookie Domain", Description = "Domain scope for the session cookie. Leading '.' applies to all subdomains (e.g. '.fraghunt.eu'). Leave blank for host-only.",
-        Placeholder = ".fraghunt.eu", Group = "Session", Order = 81)]
+    [ConfigField(Label = "Cookie Domain", Description = "Domain scope for the session cookie. Leading '.' applies to all subdomains (e.g. '.example.com'). Leave blank for host-only.",
+        Placeholder = ".example.com", Group = "Session", Order = 81)]
     public string CookieDomain { get; set; } = "";
 
     [ConfigField(Label = "Cookie Secure", Description = "Mark the session cookie as Secure (HTTPS-only). Should be true in production.",

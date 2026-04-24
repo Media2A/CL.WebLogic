@@ -1004,11 +1004,10 @@ public sealed class WebLogicLibrary : ILibrary
         // NOTE: demo-signin / signout / /weblogic/auth-demo removed on purpose.
         // They were a tutorial aid that let any caller write an arbitrary user
         // id into the session, which downstream auth code then trusted as the
-        // caller's identity. Real apps use the host's IWebIdentityStore flow
-        // (FragHunt.Shared.Identity.FragHuntMySqlIdentityStore in FragHunt's
-        // case). Don't re-introduce these unless you also gate them behind a
-        // non-default config flag AND strip them before the app is reachable
-        // from the public internet.
+        // caller's identity. Real apps implement IWebSessionStore and
+        // IWebIdentityStore themselves. Don't re-introduce these unless you
+        // also gate them behind a non-default config flag AND strip them
+        // before the app is reachable from the public internet.
 
         explorerContributor.RegisterPage("/weblogic/live", new WebRouteOptions
         {
