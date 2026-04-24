@@ -216,13 +216,15 @@ public sealed class WebSecurityService
         if (CsrfSafeMethods.Contains(request.Method))
             return null;
 
+        // Anonymous POST (no session cookie resolved): pass. There is no cross-site
+        // request forgery risk without an authenticated cookie — the worst "login
+        // CSRF" class attack has an attacker submitting credentials on a victim's
+        // behalf, which is a weak primitive we deliberately accept in exchange for
+        // not having to seed a pre-auth CSRF cookie (and a DB row for every bot
+        // that loads the login page). Every authenticated POST is still gated.
         var session = request.HttpContext.Items[SessionCookieItemKey] as WebSessionRecord;
         if (session is null)
-        {
-            // No session → no CSRF token. Fail closed.
-            PublishBlockedEvent(request, StatusCodes.Status403Forbidden, "csrf_missing_session");
-            return WebResult.Text("CSRF validation failed", StatusCodes.Status403Forbidden);
-        }
+            return null;
 
         var submittedToken = request.HttpContext.Request.Headers[CsrfHeader].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(submittedToken) && request.HttpContext.Request.HasFormContentType)
