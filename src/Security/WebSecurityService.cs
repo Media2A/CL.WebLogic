@@ -14,6 +14,7 @@ public sealed class WebSecurityService
 {
     internal const string SessionCookieItemKey = "weblogic.session";
     internal const string SessionClearFlagItemKey = "weblogic.session.clear";
+    internal const string SessionDirtyFlagItemKey = "weblogic.session.dirty";
 
     private readonly LibraryContext _context;
     private readonly WebLogicConfig _config;
@@ -44,6 +45,9 @@ public sealed class WebSecurityService
     /// runtime before building the request context. On success the returned record
     /// is also stashed in <c>HttpContext.Items</c> so downstream code (CSRF, sign-in
     /// rotation, sign-out, realtime hub) can read it without a second DB lookup.
+    /// The returned record's <c>AppData</c> is a mutable dictionary that the
+    /// runtime exposes as <c>WebRequestContext.Session</c>; writes during the
+    /// request are flushed by <see cref="FlushSessionAppDataAsync"/>.
     /// </summary>
     public async Task<WebSessionRecord?> ResolveSessionAsync(HttpContext httpContext)
     {
@@ -80,14 +84,34 @@ public sealed class WebSecurityService
             }
         }
 
-        httpContext.Items[SessionCookieItemKey] = session;
+        // Repack the record with a MUTABLE AppData copy so WebRequestContext.Session
+        // can accept writes during the request. The flush at end-of-request diffs
+        // against the store, so local mutation is safe to expose.
+        var mutable = session with
+        {
+            AppData = new Dictionary<string, string>(session.AppData, StringComparer.OrdinalIgnoreCase)
+        };
+        httpContext.Items[SessionCookieItemKey] = mutable;
 
         // Sliding expiry: advance last-seen and push expires_at forward. Not awaited
         // on the hot path — failures here shouldn't block the request, and the store
         // is expected to be idempotent.
         _ = _sessionStore.TouchAsync(token, DateTime.UtcNow);
 
-        return session;
+        return mutable;
+    }
+
+    /// <summary>
+    /// Flush pending in-request session AppData writes to the store. Called from the
+    /// response path; no-op when nothing's been mutated.
+    /// </summary>
+    public async Task FlushSessionAppDataAsync(HttpContext httpContext)
+    {
+        if (_sessionStore is null) return;
+        if (httpContext.Items[SessionDirtyFlagItemKey] is not true) return;
+        if (httpContext.Items[SessionCookieItemKey] is not WebSessionRecord session) return;
+        await _sessionStore.UpdateAppDataAsync(session.Token, session.AppData).ConfigureAwait(false);
+        httpContext.Items.Remove(SessionDirtyFlagItemKey);
     }
 
     /// <summary>
@@ -254,6 +278,7 @@ public sealed class WebSecurityService
         string userId,
         IReadOnlyList<string> accessGroups,
         bool rememberMe,
+        IReadOnlyDictionary<string, string>? appData = null,
         CancellationToken cancellationToken = default)
     {
         if (_sessionStore is null)
@@ -279,7 +304,8 @@ public sealed class WebSecurityService
             IdleTimeout = TimeSpan.FromMinutes(_config.Session.IdleTimeoutMinutes),
             RememberMeLifetime = TimeSpan.FromDays(_config.Session.RememberMeDays),
             IpHash = ipHash,
-            UserAgentHash = uaHash
+            UserAgentHash = uaHash,
+            AppData = appData ?? WebSessionRecord.EmptyAppData
         }, cancellationToken).ConfigureAwait(false);
 
         WriteSessionCookie(httpContext, created);

@@ -125,6 +125,55 @@ public sealed class InMemoryWebSessionStoreTests
         Assert.Equal("new-csrf-xyz", fetched!.CsrfToken);
     }
 
+    [Fact]
+    public async Task CreateWithAppData_RoundTrips_AndUpdateAppDataReplaces()
+    {
+        var store = new InMemoryStore();
+        var create = new WebSessionCreate
+        {
+            UserId = "alice",
+            AccessGroups = ["member"],
+            RememberMe = false,
+            MaxConcurrentSessions = 3,
+            IdleTimeout = TimeSpan.FromMinutes(120),
+            RememberMeLifetime = TimeSpan.FromDays(30),
+            AppData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["display_name"] = "Alice",
+                ["theme"] = "dark"
+            }
+        };
+
+        var created = await store.CreateAsync(create);
+        Assert.Equal("Alice", created.AppData["display_name"]);
+        Assert.Equal("dark", created.AppData["theme"]);
+
+        var fetched = await store.GetAsync(created.Token);
+        Assert.Equal("Alice", fetched!.AppData["display_name"]);
+
+        await store.UpdateAppDataAsync(created.Token, new Dictionary<string, string>
+        {
+            ["display_name"] = "Alice Updated",
+            ["theme"] = "light",
+            ["timezone"] = "Europe/Copenhagen"
+        });
+
+        var after = await store.GetAsync(created.Token);
+        Assert.Equal("Alice Updated", after!.AppData["display_name"]);
+        Assert.Equal("light", after.AppData["theme"]);
+        Assert.Equal("Europe/Copenhagen", after.AppData["timezone"]);
+    }
+
+    [Fact]
+    public async Task DefaultAppData_IsEmpty_NotNull()
+    {
+        var store = new InMemoryStore();
+        var created = await store.CreateAsync(MakeCreate());
+
+        Assert.NotNull(created.AppData);
+        Assert.Empty(created.AppData);
+    }
+
     // Minimal reference implementation. Not production-quality (no hashing,
     // no concurrency guard) — exists to pin the contract.
     private sealed class InMemoryStore : IWebSessionStore
@@ -154,7 +203,8 @@ public sealed class InMemoryWebSessionStoreTests
                 LastSeenAtUtc = now,
                 IsRememberMe = input.RememberMe,
                 IpHash = input.IpHash,
-                UserAgentHash = input.UserAgentHash
+                UserAgentHash = input.UserAgentHash,
+                AppData = new Dictionary<string, string>(input.AppData, StringComparer.OrdinalIgnoreCase)
             };
 
             var existing = _byToken.Values
@@ -204,6 +254,16 @@ public sealed class InMemoryWebSessionStoreTests
         {
             if (_byToken.TryGetValue(sessionToken, out var record))
                 _byToken[sessionToken] = record with { CsrfToken = csrfToken };
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAppDataAsync(string sessionToken, IReadOnlyDictionary<string, string> appData, CancellationToken cancellationToken = default)
+        {
+            if (_byToken.TryGetValue(sessionToken, out var record))
+                _byToken[sessionToken] = record with
+                {
+                    AppData = new Dictionary<string, string>(appData, StringComparer.OrdinalIgnoreCase)
+                };
             return Task.CompletedTask;
         }
 

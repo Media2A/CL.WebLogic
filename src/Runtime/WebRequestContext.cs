@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CL.WebLogic.Forms;
 using CL.WebLogic.Routing;
+using CL.WebLogic.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +24,12 @@ public sealed class WebRequestContext
     public required IReadOnlyDictionary<string, string> Headers { get; init; }
     public required IReadOnlyDictionary<string, string> Query { get; init; }
     public required IReadOnlyDictionary<string, string> Cookies { get; init; }
+    /// <summary>
+    /// App-scoped session key/value pairs sourced from the DB-backed session row
+    /// (via <c>WebSessionRecord.AppData</c>). Reads are immediate; writes via
+    /// <see cref="SetSessionValue(string, string?)"/> mutate the in-request view
+    /// and are flushed to the store at end of request.
+    /// </summary>
     public required IReadOnlyDictionary<string, string> Session { get; init; }
     public required WebRequestIdentity Identity { get; init; }
 
@@ -69,13 +76,22 @@ public sealed class WebRequestContext
 
     public void SetSessionValue(string key, string? value)
     {
+        // Writes land in the DB-backed session's AppData blob. The runtime flushes
+        // accumulated writes once per request; a reader in the same request sees
+        // the write immediately because we mutate the in-request dictionary too.
+        if (Session is not IDictionary<string, string> mutable)
+            throw new InvalidOperationException("Session is not mutable on this request (no active DB-backed session).");
+
         if (value is null)
         {
-            HttpContext.Session.Remove(key);
-            return;
+            mutable.Remove(key);
+        }
+        else
+        {
+            mutable[key] = value;
         }
 
-        HttpContext.Session.SetString(key, value);
+        HttpContext.Items[WebSecurityService.SessionDirtyFlagItemKey] = true;
     }
 
     public T? GetService<T>() where T : class =>

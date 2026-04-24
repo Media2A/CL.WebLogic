@@ -51,6 +51,15 @@ public interface IWebSessionStore
     /// itself. Used after sign-in to rebind the CSRF token to the new identity.
     /// </summary>
     Task UpdateCsrfTokenAsync(string sessionToken, string csrfToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replace the session's app-scoped metadata blob. The blob is an arbitrary
+    /// string → string dictionary owned by the consuming app (e.g. display name,
+    /// theme preference, timezone). The library reads it off the resolved
+    /// session and exposes it as <c>WebRequestContext.SessionData</c>, but
+    /// otherwise treats it as opaque.
+    /// </summary>
+    Task UpdateAppDataAsync(string sessionToken, IReadOnlyDictionary<string, string> appData, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -85,6 +94,17 @@ public sealed record WebSessionRecord
 
     public byte[]? UserAgentHash { get; init; }
 
+    /// <summary>
+    /// App-scoped key/value metadata for this session (display name, theme,
+    /// timezone, etc.). Populated by the app at sign-in, updatable via
+    /// <see cref="IWebSessionStore.UpdateAppDataAsync"/>. The library itself
+    /// treats this as opaque.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> AppData { get; init; } = EmptyAppData;
+
+    internal static readonly IReadOnlyDictionary<string, string> EmptyAppData =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
     public bool IsExpired(DateTime nowUtc) => ExpiresAtUtc <= nowUtc;
 }
 
@@ -106,4 +126,7 @@ public sealed record WebSessionCreate
 
     public byte[]? IpHash { get; init; }
     public byte[]? UserAgentHash { get; init; }
+
+    /// <summary>Initial app-scoped metadata for the session row. Defaults to empty.</summary>
+    public IReadOnlyDictionary<string, string> AppData { get; init; } = WebSessionRecord.EmptyAppData;
 }

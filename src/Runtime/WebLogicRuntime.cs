@@ -192,7 +192,7 @@ public sealed class WebLogicRuntime
         // Resolve the DB-backed session first. The resolver stashes the record on
         // HttpContext.Items so CSRF, sign-in rotation, and sign-out can read it
         // without another round trip. No session → anonymous request.
-        await _security.ResolveSessionAsync(httpContext).ConfigureAwait(false);
+        var session = await _security.ResolveSessionAsync(httpContext).ConfigureAwait(false);
 
         var identity = await _security.ResolveIdentityAsync(httpContext).ConfigureAwait(false);
 
@@ -206,7 +206,7 @@ public sealed class WebLogicRuntime
             Headers = httpContext.Request.Headers.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase),
             Query = httpContext.Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase),
             Cookies = httpContext.Request.Cookies.ToDictionary(k => k.Key, v => v.Value, StringComparer.OrdinalIgnoreCase),
-            Session = EmptySession,
+            Session = session?.AppData ?? EmptySession,
             Identity = identity
         };
     }
@@ -221,6 +221,7 @@ public sealed class WebLogicRuntime
 
         _security.ApplySecurityHeaders(httpContext);
         _security.FlushSessionCookie(httpContext);
+        await _security.FlushSessionAppDataAsync(httpContext).ConfigureAwait(false);
 
         if (result.Headers is not null)
         {
