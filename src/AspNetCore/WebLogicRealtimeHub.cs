@@ -46,17 +46,15 @@ public sealed class WebLogicRealtimeHub : Hub
         return Task.FromResult(new WebLogicRealtimeReplayResponse(snapshot, filtered));
     }
 
+    // Identity for the realtime hub comes from the authenticated session only. We used to
+    // fall back to ?userId= / ?accessGroups= on the WS upgrade URL, which let any anonymous
+    // client subscribe to another user's private event stream or any access-group stream.
     private static string ResolveUserId(HttpContext httpContext) =>
-        httpContext.Session.GetString("weblogic.user_id")
-        ?? httpContext.Request.Query["userId"].ToString()
-        ?? string.Empty;
+        httpContext.Session.GetString("weblogic.user_id") ?? string.Empty;
 
     private static IReadOnlyList<string> ResolveAccessGroups(HttpContext httpContext)
     {
         var raw = httpContext.Session.GetString("weblogic.access_groups");
-        if (string.IsNullOrWhiteSpace(raw))
-            raw = httpContext.Request.Query["accessGroups"].ToString();
-
         if (string.IsNullOrWhiteSpace(raw))
             return [];
 

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Going forward, versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-04-24
+
+Security release — two unauthenticated auth-bypass primitives closed.
+
+### Security
+- **`DefaultWebAuthResolver` no longer reads identity from `X-WebLogic-UserId` / `X-WebLogic-AccessGroups` by default.** `AuthConfig.AllowHeaderUserId` and `AllowHeaderAccessGroups` now default to `false`. If the app was exposed behind a proxy that didn't strip these headers, any anonymous client could claim any user id and any access group (including admin). Deployments that genuinely relied on header-bootstrapped identity can re-enable the flags explicitly per environment (the field descriptions now spell out the risk).
+- **`WebLogicRealtimeHub` no longer accepts `?userId=` / `?accessGroups=` query parameters for SignalR connections.** Identity is taken from the authenticated session only. Previously any anonymous WebSocket client could subscribe to another user's private event stream or any access-group stream by setting query params on the hub URL.
+
+### Notes
+- No breaking source-API changes. Consumers that were using header-bootstrapped identity intentionally must flip the two `AllowHeader*` flags to `true` in their persisted `WebLogicConfig`.
+- Tests: 27/27 passing.
+
 ## [0.1.0] - 2026-04-24
 
 First tagged release — packaging and CI groundwork.

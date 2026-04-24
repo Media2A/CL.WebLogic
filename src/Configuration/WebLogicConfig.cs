@@ -212,13 +212,17 @@ public sealed class SecurityHeadersConfig
 
 public sealed class AuthConfig
 {
-    [ConfigField(Label = "Allow Header User ID", Description = "Read user ID from custom header (dev/testing).",
+    // Header-based identity bootstrap (`X-WebLogic-UserId`, `X-WebLogic-AccessGroups`) is a
+    // dev/testing affordance. If left enabled behind a proxy that doesn't strip the headers,
+    // any unauthenticated client can claim any user id and any access group (including admin).
+    // Defaults are OFF — opt in explicitly per environment.
+    [ConfigField(Label = "Allow Header User ID", Description = "Read user ID from X-WebLogic-UserId (dev/testing only — unauthenticated impersonation if exposed).",
         Group = "Auth", Order = 60, Collapsed = true)]
-    public bool AllowHeaderUserId { get; set; } = true;
+    public bool AllowHeaderUserId { get; set; } = false;
 
-    [ConfigField(Label = "Allow Header Access Groups", Description = "Read access groups from custom header.",
+    [ConfigField(Label = "Allow Header Access Groups", Description = "Read access groups from X-WebLogic-AccessGroups (dev/testing only — unauthenticated role assumption if exposed).",
         Group = "Auth", Order = 61, Collapsed = true)]
-    public bool AllowHeaderAccessGroups { get; set; } = true;
+    public bool AllowHeaderAccessGroups { get; set; } = false;
 
     [ConfigField(Label = "Allow Session User ID", Description = "Read user ID from session (standard).",
         Group = "Auth", Order = 62, Collapsed = true)]

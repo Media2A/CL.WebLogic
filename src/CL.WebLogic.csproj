@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>CL.WebLogic</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Media2A</Authors>
     <Company>Media2A</Company>
     <Description>A web application toolkit for CodeLogic 4 — routing, templating, forms, widgets, realtime (SignalR), SPA navigation, and pluggable auth abstractions for .NET 10.</Description>
