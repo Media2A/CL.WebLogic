@@ -247,8 +247,33 @@ public sealed class WebRequestIdentity
     public bool HasAnyAccessGroup(IEnumerable<string> accessGroups) =>
         accessGroups.Any(HasAccessGroup);
 
-    public bool HasPermission(string permission) =>
-        _permissions.Contains(permission);
+    /// <summary>
+    /// Whether the identity's permission set grants <paramref name="permission"/>.
+    /// Recognises three grant-token shapes the permission cache may emit:
+    /// <list type="bullet">
+    ///   <item><c>exact.key</c> — case-insensitive equality.</item>
+    ///   <item><c>*</c> — the super-admin wildcard, matches everything.</item>
+    ///   <item><c>segment.*</c> — prefix glob (e.g. <c>admin.*</c> covers
+    ///   <c>admin.settings</c>, <c>admin.security</c>, …).</item>
+    /// </list>
+    /// Without these the wildcard tokens stored against super-admin roles never
+    /// match concrete permission strings like <c>admin.access</c>, so menu items
+    /// gated by <c>{if:permission:…}</c> stay hidden for super-admins.
+    /// </summary>
+    public bool HasPermission(string permission)
+    {
+        if (string.IsNullOrWhiteSpace(permission)) return false;
+        if (_permissions.Contains(permission)) return true;
+        if (_permissions.Contains("*")) return true;
+        foreach (var grant in _permissions)
+        {
+            if (grant.Length <= 1 || grant[^1] != '*') continue;
+            var prefix = grant.AsSpan(0, grant.Length - 1);
+            if (permission.AsSpan().StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
 
     public bool HasAnyPermission(IEnumerable<string> permissions) =>
         permissions.Any(HasPermission);
