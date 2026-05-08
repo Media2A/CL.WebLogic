@@ -25,6 +25,12 @@ public sealed class WebRequestContext
     public required IReadOnlyDictionary<string, string> Query { get; init; }
     public required IReadOnlyDictionary<string, string> Cookies { get; init; }
     /// <summary>
+    /// Per-process output cache exposed to handlers for fragment-level caching
+    /// (<see cref="WebOutputCache.GetOrAddFragmentAsync{T}"/>). Same backing store
+    /// the route-level page cache uses; safe to call concurrently.
+    /// </summary>
+    public required WebOutputCache OutputCache { get; init; }
+    /// <summary>
     /// App-scoped session key/value pairs sourced from the DB-backed session row
     /// (via <c>WebSessionRecord.AppData</c>). Reads are immediate; writes via
     /// <see cref="SetSessionValue(string, string?)"/> mutate the in-request view

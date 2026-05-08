@@ -26,6 +26,7 @@ public sealed class WebRouteDefinition
     public string? RequiredPermission { get; init; }
     public required bool AllowAnonymous { get; init; }
     public IWebMiddleware[] Middleware { get; init; } = [];
+    public WebOutputCachePolicy? OutputCache { get; init; }
 }
 
 public sealed class WebRouteRegistry
@@ -67,7 +68,8 @@ public sealed class WebRouteRegistry
             RequiredAccessGroups = options.RequiredAccessGroups,
             RequiredPermission = string.IsNullOrWhiteSpace(options.RequiredPermission) ? null : options.RequiredPermission,
             AllowAnonymous = options.AllowAnonymous,
-            Middleware = options.Middleware ?? []
+            Middleware = options.Middleware ?? [],
+            OutputCache = options.OutputCache
         };
     }
 

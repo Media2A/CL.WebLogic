@@ -52,6 +52,14 @@ public sealed class WebLogicLibrary : ILibrary
     public IWebPermissionResolver? PermissionResolver { get; private set; }
 
     /// <summary>
+    /// Two-layer output cache: route-level page caching driven by
+    /// <c>WebRouteOptions.OutputCache</c>, and handler-level fragment caching via
+    /// <c>WebRequestContext.OutputCache.GetOrAddFragmentAsync</c>. Null until
+    /// <see cref="OnInitializeAsync"/>.
+    /// </summary>
+    public WebOutputCache? OutputCache { get; private set; }
+
+    /// <summary>
     /// Security service — surfaced for the app's sign-in / sign-out handlers to
     /// call <c>RotateAfterSignInAsync</c> / <c>SignOutAsync</c>. Null before
     /// <c>OnInitializeAsync</c>.
@@ -81,6 +89,7 @@ public sealed class WebLogicLibrary : ILibrary
         }
 
         _cache = new MemoryCache(TimeSpan.FromSeconds(30));
+        OutputCache = new WebOutputCache(_cache);
 
         IdentityStore = _configuredIdentityStore;
         DashboardLayouts = _configuredDashboardLayouts ?? new FileWebDashboardLayoutStore(context);
@@ -110,7 +119,8 @@ public sealed class WebLogicLibrary : ILibrary
             Routes,
             themeManager,
             security,
-            auditStore);
+            auditStore,
+            OutputCache);
 
         Registration.SetRuntime(Runtime);
 
@@ -157,6 +167,7 @@ public sealed class WebLogicLibrary : ILibrary
 
         _cache?.Dispose();
         _cache = null;
+        OutputCache = null;
         RealtimeBridge?.Dispose();
         RealtimeBridge = null;
         Runtime = null;

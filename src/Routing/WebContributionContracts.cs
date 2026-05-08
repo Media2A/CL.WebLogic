@@ -35,6 +35,14 @@ public sealed class WebRouteOptions
 
     public bool AllowAnonymous { get; init; } = true;
     public IWebMiddleware[]? Middleware { get; init; }
+
+    /// <summary>
+    /// Optional output-caching policy. When set, the runtime caches the rendered
+    /// <c>WebResult</c> for this route subject to the conditions documented on
+    /// <see cref="WebOutputCachePolicy"/> (GET only, 200 only, no <c>Set-Cookie</c>,
+    /// authenticated bypass unless explicitly opted in).
+    /// </summary>
+    public WebOutputCachePolicy? OutputCache { get; init; }
 }
 
 public sealed class WebRegistrationContext

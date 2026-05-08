@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. Going forward, versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-05-08
+
+Two-layer output caching. Additive — no breaking changes.
+
+### Added
+- `WebOutputCachePolicy` on `WebRouteOptions.OutputCache` — opt a route into rendered-`WebResult` caching with a TTL, per-query-key vary list, and a `Scope` enum (`AnonymousOnly` default, `Shared`, `PerUser`).
+- Conservative defaults: GET only, 200 only, never caches a response that set `Set-Cookie`. Default `Scope = AnonymousOnly` means authenticated requests bypass the cache entirely; opt up to `Shared` for genuinely non-personalised pages or `PerUser` for per-visitor entries.
+- `WebOutputCache.GetOrAddFragmentAsync<T>` for handler-level fragment caching, exposed via `WebRequestContext.OutputCache`. Single-flight guard around the factory: a stampede after expiry triggers exactly one rebuild per key.
+- `WebLogicLibrary.OutputCache` (page + fragment) backed by the existing in-process `MemoryCache`. Invalidation helpers: `InvalidatePageAsync`, `InvalidatePagesByPathPrefixAsync`, `InvalidateFragmentAsync`, `InvalidateFragmentsByPrefixAsync`.
+- When a policy is in effect and the response is cacheable, the runtime mirrors `Cache-Control: public, max-age={ttl}` onto the response so an upstream CDN / browser sees the same expiry. Suppressed automatically for per-user entries.
+
+### Changed
+- `WebLogicRuntime` constructor now takes a `WebOutputCache`. Apps using the library through `WebLogicLibrary` need no change; direct constructors of `WebLogicRuntime` (rare) need to thread the cache through.
+- `WebRequestContext` has a new required `OutputCache` field. Created automatically by the runtime — only relevant if you build `WebRequestContext` instances by hand (e.g. tests).
+
 ## [0.2.0] - 2026-04-24
 
 DB-backed sessions. Breaking. This tag ships the library half of the session

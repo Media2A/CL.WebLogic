@@ -16,6 +16,7 @@ public sealed class WebLogicRuntime
     private readonly ThemeManager _themeManager;
     private readonly WebSecurityService _security;
     private readonly IWebRequestAuditStore _auditStore;
+    private readonly WebOutputCache _outputCache;
     private readonly List<IWebMiddleware> _globalMiddleware = [];
 
     public string? ThemeRoot { get; private set; }
@@ -36,7 +37,8 @@ public sealed class WebLogicRuntime
         WebRouteRegistry routes,
         ThemeManager themeManager,
         WebSecurityService security,
-        IWebRequestAuditStore auditStore)
+        IWebRequestAuditStore auditStore,
+        WebOutputCache outputCache)
     {
         _context = context;
         _config = config;
@@ -44,6 +46,7 @@ public sealed class WebLogicRuntime
         _themeManager = themeManager;
         _security = security;
         _auditStore = auditStore;
+        _outputCache = outputCache;
     }
 
     public Task InitializeAsync()
@@ -165,7 +168,39 @@ public sealed class WebLogicRuntime
         }
     }
 
-    private Task<WebResult> ExecuteWithMiddlewareAsync(WebRequestContext request, WebRouteDefinition route)
+    private async Task<WebResult> ExecuteWithMiddlewareAsync(WebRequestContext request, WebRouteDefinition route)
+    {
+        // Page-level output cache. Eligible only on GET requests, and only when
+        // the route's policy admits this caller's auth state. AnonymousOnly is
+        // the defensive default; authenticated requests skip both reads and
+        // writes for that scope.
+        var policy = route.OutputCache;
+        var cacheEligible = policy is not null
+                            && string.Equals(request.Method, "GET", StringComparison.OrdinalIgnoreCase)
+                            && (policy.Scope != WebOutputCacheScope.AnonymousOnly || !request.IsAuthenticated);
+
+        string? pageKey = null;
+        if (cacheEligible && policy is not null)
+        {
+            pageKey = WebOutputCache.BuildPageKey(
+                request.Path,
+                policy,
+                request.Query,
+                request.IsAuthenticated ? request.UserId : null);
+
+            var cached = await _outputCache.TryGetPageAsync(pageKey).ConfigureAwait(false);
+            if (cached is not null) return cached;
+        }
+
+        var result = await RunPipelineAsync(request, route).ConfigureAwait(false);
+
+        if (pageKey is not null && policy is not null && IsCacheableResponse(result))
+            await _outputCache.SetPageAsync(pageKey, result, policy.Ttl).ConfigureAwait(false);
+
+        return result;
+    }
+
+    private Task<WebResult> RunPipelineAsync(WebRequestContext request, WebRouteDefinition route)
     {
         var chain = new List<IWebMiddleware>(_globalMiddleware.Count + route.Middleware.Length);
         chain.AddRange(_globalMiddleware);
@@ -187,6 +222,24 @@ public sealed class WebLogicRuntime
         return next();
     }
 
+    /// <summary>
+    /// A response is only safe to cache when the handler returned a plain success
+    /// with no per-request state attached. Anything that writes a Set-Cookie, a
+    /// non-200 status, or a redirect must skip the cache.
+    /// </summary>
+    private static bool IsCacheableResponse(WebResult result)
+    {
+        if (result.StatusCode != StatusCodes.Status200OK) return false;
+        if (result.Headers is null) return true;
+        foreach (var key in result.Headers.Keys)
+        {
+            if (string.Equals(key, "Set-Cookie", StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+        return true;
+    }
+
+
     private async Task<WebRequestContext> CreateContextAsync(HttpContext httpContext)
     {
         // Resolve the DB-backed session first. The resolver stashes the record on
@@ -206,6 +259,7 @@ public sealed class WebLogicRuntime
             Headers = httpContext.Request.Headers.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase),
             Query = httpContext.Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase),
             Cookies = httpContext.Request.Cookies.ToDictionary(k => k.Key, v => v.Value, StringComparer.OrdinalIgnoreCase),
+            OutputCache = _outputCache,
             Session = session?.AppData ?? EmptySession,
             Identity = identity
         };
@@ -227,6 +281,19 @@ public sealed class WebLogicRuntime
         {
             foreach (var header in result.Headers)
                 httpContext.Response.Headers[header.Key] = header.Value;
+        }
+
+        // Mirror the route's output-cache TTL onto the response so an upstream
+        // CDN or the browser can cache the same window. Per-user entries are
+        // private to each visitor; never advertise them as shared-cacheable.
+        if (request.Route?.OutputCache is { SetClientCacheHeaders: true } cachePolicy
+            && cachePolicy.Scope != WebOutputCacheScope.PerUser
+            && result.StatusCode == StatusCodes.Status200OK
+            && string.Equals(request.Method, "GET", StringComparison.OrdinalIgnoreCase)
+            && !httpContext.Response.Headers.ContainsKey("Cache-Control"))
+        {
+            var seconds = (long)Math.Max(1, cachePolicy.Ttl.TotalSeconds);
+            httpContext.Response.Headers["Cache-Control"] = $"public, max-age={seconds}";
         }
 
         if (result.StatusCode == 304)
