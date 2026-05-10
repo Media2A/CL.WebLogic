@@ -163,24 +163,40 @@ public sealed class WebSecurityService
 
         if (_config.Security.EnableDnsbl)
         {
-            var library = Libraries.Get<NetUtilsLibrary>();
-            if (library is not null)
+            // Check the app-provided allowlist hook first. Hosts use this to
+            // bypass DNSBL for IPs they've already vouched for (typically via a
+            // trust-on-first-use list populated when an authenticated request
+            // landed). Skipping the network round-trip on the hot path keeps
+            // game-server / bearer-token traffic snappy.
+            var allowlist = _config.Security.IpAllowlistResolver;
+            var allowlisted = false;
+            if (allowlist is not null)
             {
-                try
+                try { allowlisted = await allowlist(request.ClientIp).ConfigureAwait(false); }
+                catch (Exception ex) { _context.Logger.Warning($"IpAllowlistResolver threw: {ex.Message}"); }
+            }
+
+            if (!allowlisted)
+            {
+                var library = Libraries.Get<NetUtilsLibrary>();
+                if (library is not null)
                 {
-                    var result = await library.Dnsbl.CheckIpAsync(request.ClientIp).ConfigureAwait(false);
-                    if (result.IsBlacklisted)
+                    try
                     {
-                        PublishBlockedEvent(
-                            request,
-                            StatusCodes.Status403Forbidden,
-                            $"dnsbl:{result.MatchedService ?? "matched"}");
-                        return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
+                        var result = await library.Dnsbl.CheckIpAsync(request.ClientIp).ConfigureAwait(false);
+                        if (result.IsBlacklisted)
+                        {
+                            PublishBlockedEvent(
+                                request,
+                                StatusCodes.Status403Forbidden,
+                                $"dnsbl:{result.MatchedService ?? "matched"}");
+                            return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    _context.Logger.Warning($"DNSBL check failed: {ex.Message}");
+                    catch (Exception ex)
+                    {
+                        _context.Logger.Warning($"DNSBL check failed: {ex.Message}");
+                    }
                 }
             }
         }
