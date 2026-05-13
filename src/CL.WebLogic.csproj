@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CodeLogic" Version="4.0.0" />
+    <PackageReference Include="CodeLogic" Version="4.0.2" />
     <PackageReference Include="CodeLogic.Common" Version="3.2.12" />
     <PackageReference Include="CodeLogic.GitHelper" Version="3.3.1" />
     <PackageReference Include="CodeLogic.NetUtils" Version="3.3.2" />
