@@ -55,12 +55,83 @@ public sealed class WebRouteRegistry
         params string[] methods)
     {
         var normalized = NormalizePath(path);
+        var newMethods = NormalizeMethods(methods);
+
+        // If a route is already registered at this path, merge — the
+        // common case is one contributor registering separate handlers
+        // for GET and POST on the same path (umbrella + ingest, read +
+        // write, etc.). The previous behaviour silently overwrote the
+        // first registration, which surfaced as confusing 405s at runtime.
+        //
+        // Merge rules:
+        //   - methods must NOT overlap (each method maps to one handler)
+        //   - auth posture must match (AllowAnonymous, RequiredPermission,
+        //     RequiredAccessGroups) — different per-method auth isn't
+        //     expressible on a single route definition
+        //   - the merged handler dispatches by HTTP method
+        //   - the first registration's Name / Description / Tags /
+        //     Middleware / OutputCache are kept; the second's are folded
+        //     into the description for traceability
+        if (_routes.TryGetValue(normalized, out var existing))
+        {
+            var overlap = newMethods.Where(m => existing.Methods.Contains(m)).ToArray();
+            if (overlap.Length > 0)
+                throw new InvalidOperationException(
+                    $"Route '{normalized}' is already registered for method(s) [{string.Join(", ", overlap)}]. " +
+                    "Each (path, method) pair can have only one handler. Either combine the handlers and dispatch inside, " +
+                    "or use distinct paths.");
+
+            var requiredPermission = string.IsNullOrWhiteSpace(options.RequiredPermission) ? null : options.RequiredPermission;
+            if (existing.AllowAnonymous != options.AllowAnonymous
+                || !string.Equals(existing.RequiredPermission, requiredPermission, StringComparison.Ordinal)
+                || !existing.RequiredAccessGroups.OrderBy(g => g, StringComparer.Ordinal)
+                    .SequenceEqual(options.RequiredAccessGroups.OrderBy(g => g, StringComparer.Ordinal), StringComparer.Ordinal))
+                throw new InvalidOperationException(
+                    $"Route '{normalized}' is already registered with a different auth posture " +
+                    "(AllowAnonymous / RequiredPermission / RequiredAccessGroups). " +
+                    "Merge the registrations into one handler with matching options, or use distinct paths.");
+
+            var existingHandler = existing.Handler;
+            var existingMethods = existing.Methods;
+            var newHandler = handler;
+            WebRouteHandler dispatcher = ctx =>
+                existingMethods.Contains(ctx.HttpContext.Request.Method)
+                    ? existingHandler(ctx)
+                    : newHandler(ctx);
+
+            var combinedMethods = new HashSet<string>(existing.Methods, StringComparer.OrdinalIgnoreCase);
+            foreach (var m in newMethods) combinedMethods.Add(m);
+
+            var newDesc = string.IsNullOrWhiteSpace(options.Description) ? null : options.Description;
+            var mergedDescription = newDesc is null || newDesc == existing.Description
+                ? existing.Description
+                : $"{existing.Description} | {newDesc}";
+
+            _routes[normalized] = new WebRouteDefinition
+            {
+                Path = normalized,
+                Kind = existing.Kind,
+                Handler = dispatcher,
+                Methods = combinedMethods,
+                Contributor = existing.Contributor,
+                Name = existing.Name,
+                Description = mergedDescription,
+                Tags = existing.Tags,
+                RequiredAccessGroups = existing.RequiredAccessGroups,
+                RequiredPermission = existing.RequiredPermission,
+                AllowAnonymous = existing.AllowAnonymous,
+                Middleware = existing.Middleware,
+                OutputCache = existing.OutputCache
+            };
+            return;
+        }
+
         _routes[normalized] = new WebRouteDefinition
         {
             Path = normalized,
             Kind = kind,
             Handler = handler,
-            Methods = NormalizeMethods(methods),
+            Methods = newMethods,
             Contributor = contributor,
             Name = string.IsNullOrWhiteSpace(options.Name) ? normalized : options.Name,
             Description = options.Description,
