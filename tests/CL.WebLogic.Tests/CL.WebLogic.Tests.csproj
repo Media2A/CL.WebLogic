@@ -18,6 +18,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CL.WebLogic.csproj" />
+    <!-- The template source generator under test: compiles TestTheme/**/*.html
+         into ICompiledTemplate classes baked into THIS assembly. -->
+    <ProjectReference Include="..\..\analyzer\CL.WebLogic.TemplateCompiler\CL.WebLogic.TemplateCompiler.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="TestTheme\**\*.html" />
+    <None Include="TestTheme\**\*.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Roslyn analyzers/generators must target netstandard2.0 to load in every host. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The SAME parser/AST sources the runtime engine compiles (CL.WebLogic/src/Templates).
+       Linked, not referenced: one source of truth compiled twice, so the generator
+       can never parse differently from the interpreter. Files there must stay
+       netstandard2.0-safe. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Templates\**\*.cs" LinkBase="Shared" />
+  </ItemGroup>
+
+</Project>

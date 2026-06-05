@@ -137,6 +137,7 @@ public sealed partial class ThemeManager
     public void ClearCache()
     {
         _cache.Clear();
+        ClearAstCache();
     }
 
     public void DisposeCaching()
@@ -164,7 +165,18 @@ public sealed partial class ThemeManager
             .ToArray();
 
         foreach (var key in keysToRemove)
+        {
             _cache.TryRemove(key, out _);
+            InvalidateAstPath(key);
+        }
+
+        // The byte cache may not hold the key yet (e.g. file created before any
+        // read) while the AST cache does — sweep it by the same suffix rule.
+        var astKeysToRemove = _astCache.Keys
+            .Where(key => fullPath.EndsWith(key.Replace('/', Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        foreach (var key in astKeysToRemove)
+            InvalidateAstPath(key);
 
         if (keysToRemove.Length > 0)
             _context.Logger.Debug($"Template cache invalidated: {string.Join(", ", keysToRemove)}");
@@ -189,6 +201,13 @@ public sealed partial class ThemeManager
         WebRequestContext? pageContext = null,
         WebPageMeta? meta = null)
     {
+        // AST engine: parse-once cached tree walk. Byte-compatible with the
+        // legacy pipeline below (proven by the golden-parity test suite) and the
+        // foundation for compiled templates. The regex pipeline is retained as a
+        // diagnostic fallback via Theme.UseAstEngine=false.
+        if (_config.Theme.UseAstEngine)
+            return await RenderTemplateViaAstAsync(templatePath, model, themeRoot, pageContext, meta).ConfigureAwait(false);
+
         var normalizedPath = NormalizeTemplatePath(templatePath, templatePath);
         var text = await ReadTextAsync(normalizedPath, themeRoot).ConfigureAwait(false);
         if (text is null)
@@ -764,7 +783,7 @@ public sealed partial class ThemeManager
         };
     }
 
-    private static object? ResolveRouteValue(WebRouteDefinition? route, string key) => key.ToLowerInvariant() switch
+    internal static object? ResolveRouteValue(WebRouteDefinition? route, string key) => key.ToLowerInvariant() switch
     {
         "path" => route?.Path,
         "kind" => route?.Kind.ToString(),
@@ -773,7 +792,7 @@ public sealed partial class ThemeManager
         _ => null
     };
 
-    private static object? ResolvePageValue(WebRequestContext? pageContext, string key)
+    internal static object? ResolvePageValue(WebRequestContext? pageContext, string key)
     {
         if (pageContext is null)
             return null;
@@ -795,7 +814,7 @@ public sealed partial class ThemeManager
         };
     }
 
-    private static object? ResolvePathValue(object? source, string path)
+    internal static object? ResolvePathValue(object? source, string path)
     {
         if (source is null)
             return null;
@@ -918,7 +937,7 @@ public sealed partial class ThemeManager
             yield return input[start..];
     }
 
-    private static object? ApplyFilters(object? value, (string Name, string? Arg)[] filters)
+    internal static object? ApplyFilters(object? value, (string Name, string? Arg)[] filters)
     {
         if (filters.Length == 0)
             return value;
@@ -943,6 +962,12 @@ public sealed partial class ThemeManager
                 "nl2br" => value?.ToString()?.Replace("\n", "<br>", StringComparison.Ordinal),
                 "urlencode" => Uri.EscapeDataString(value?.ToString() ?? string.Empty),
                 "slug" => Slugify(value?.ToString()),
+                "number" => FormatNumber(value, arg),
+                "percent" => FormatPercent(value, arg),
+                "round" => RoundNumber(value, arg),
+                "abbreviate" => AbbreviateNumber(value),
+                "timeago" => TimeAgo(value),
+                "filesize" => FormatFileSize(value),
                 _ => value
             };
         }
@@ -1004,7 +1029,129 @@ public sealed partial class ThemeManager
         return slug.Trim('-');
     }
 
-    private static string FormatValue(object? value, bool encode)
+    // ── numeric / time presentation filters ────────────────────────────────
+    // All use InvariantCulture so output is deterministic across hosts (and
+    // identical between the interpreter and compiled templates).
+
+    private static double? AsDouble(object? value) => value switch
+    {
+        null => null,
+        int i => i,
+        long l => l,
+        double d => d,
+        float f => f,
+        decimal m => (double)m,
+        string s when double.TryParse(s, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var parsed) => parsed,
+        _ => null
+    };
+
+    /// <summary><c>|number</c> / <c>|number:2</c> — thousands separators, optional fixed decimals.</summary>
+    private static object? FormatNumber(object? value, string? arg)
+    {
+        var number = AsDouble(value);
+        if (number is null)
+            return value;
+
+        var decimals = int.TryParse(arg, out var d) ? Math.Clamp(d, 0, 15) : 0;
+        return number.Value.ToString("N" + decimals, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary><c>|percent</c> / <c>|percent:1</c> — appends <c>%</c>; the value is already a percentage (no ×100).</summary>
+    private static object? FormatPercent(object? value, string? arg)
+    {
+        var number = AsDouble(value);
+        if (number is null)
+            return value;
+
+        var decimals = int.TryParse(arg, out var d) ? Math.Clamp(d, 0, 15) : 0;
+        return number.Value.ToString("F" + decimals, System.Globalization.CultureInfo.InvariantCulture) + "%";
+    }
+
+    /// <summary><c>|round:2</c> — rounds to N decimals (default 0).</summary>
+    private static object? RoundNumber(object? value, string? arg)
+    {
+        var number = AsDouble(value);
+        if (number is null)
+            return value;
+
+        var decimals = int.TryParse(arg, out var d) ? Math.Clamp(d, 0, 15) : 0;
+        return Math.Round(number.Value, decimals, MidpointRounding.AwayFromZero)
+            .ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary><c>|abbreviate</c> — 1234 → "1.2k", 5600000 → "5.6M".</summary>
+    private static object? AbbreviateNumber(object? value)
+    {
+        var number = AsDouble(value);
+        if (number is null)
+            return value;
+
+        var abs = Math.Abs(number.Value);
+        var sign = number.Value < 0 ? "-" : string.Empty;
+        return abs switch
+        {
+            >= 1_000_000_000 => sign + Trim1(abs / 1_000_000_000) + "B",
+            >= 1_000_000 => sign + Trim1(abs / 1_000_000) + "M",
+            >= 1_000 => sign + Trim1(abs / 1_000) + "k",
+            _ => number.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+        };
+
+        static string Trim1(double v) =>
+            (Math.Floor(v * 10) / 10).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary><c>|timeago</c> — "just now", "5m ago", "3h ago", "2d ago", or a date for older values.</summary>
+    private static object? TimeAgo(object? value)
+    {
+        DateTime? utc = value switch
+        {
+            DateTime dt => dt.Kind == DateTimeKind.Utc ? dt : dt.ToUniversalTime(),
+            DateTimeOffset dto => dto.UtcDateTime,
+            string s when DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AdjustToUniversal, out var parsed) => parsed,
+            _ => null
+        };
+
+        if (utc is null)
+            return value;
+
+        var span = DateTime.UtcNow - utc.Value;
+        if (span < TimeSpan.Zero) span = TimeSpan.Zero;
+
+        return span.TotalSeconds switch
+        {
+            < 60 => "just now",
+            < 3600 => $"{(int)span.TotalMinutes}m ago",
+            < 86400 => $"{(int)span.TotalHours}h ago",
+            < 86400 * 30 => $"{(int)span.TotalDays}d ago",
+            _ => utc.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
+        };
+    }
+
+    /// <summary><c>|filesize</c> — bytes → "1.5 KB" / "2.3 MB" / "1.1 GB".</summary>
+    private static object? FormatFileSize(object? value)
+    {
+        var number = AsDouble(value);
+        if (number is null)
+            return value;
+
+        var bytes = Math.Max(0, number.Value);
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var unit = 0;
+        while (bytes >= 1024 && unit < units.Length - 1)
+        {
+            bytes /= 1024;
+            unit++;
+        }
+
+        var text = unit == 0
+            ? bytes.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            : bytes.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+        return $"{text} {units[unit]}";
+    }
+
+    internal static string FormatValue(object? value, bool encode)
     {
         if (value is null)
             return string.Empty;
@@ -1019,7 +1166,7 @@ public sealed partial class ThemeManager
         return encode ? HtmlHelper.Encode(text) : text;
     }
 
-    private static bool IsTruthy(object? value) => value switch
+    internal static bool IsTruthy(object? value) => value switch
     {
         null => false,
         bool boolean => boolean,

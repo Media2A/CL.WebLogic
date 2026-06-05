@@ -70,15 +70,20 @@ public sealed class WebRouteRegistryTests
     }
 
     [Fact]
-    public void Register_Twice_OverwritesExistingRoute()
+    public void Register_SamePath_MergesMethodsAndKeepsFirstKind()
     {
+        // Registering a second handler on the same path MERGES (per-method
+        // dispatch) instead of overwriting — the first registration's Kind is
+        // kept and the method sets combine. (The old overwrite behaviour
+        // surfaced as confusing 405s; this test previously asserted it.)
         var registry = new WebRouteRegistry();
         registry.RegisterPage("/home", NoopHandler);
         registry.RegisterApi("/home", NoopHandler, "POST");
 
         Assert.Equal(1, registry.Count);
         Assert.True(registry.TryGet("/home", out var route));
-        Assert.Equal(WebRouteKind.Api, route!.Kind);
+        Assert.Equal(WebRouteKind.Page, route!.Kind);
+        Assert.Contains("GET", route.Methods);
         Assert.Contains("POST", route.Methods);
     }
 

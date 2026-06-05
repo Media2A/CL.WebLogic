@@ -59,6 +59,9 @@ public sealed class WebLogicRuntime
     {
         ThemeRoot = await _themeManager.ResolveThemeRootAsync().ConfigureAwait(false);
         _context.Logger.Info($"Theme root resolved to: {ThemeRoot}");
+        _context.Logger.Info(Theming.CompiledTemplateRegistry.Count > 0
+            ? $"Compiled templates: {Theming.CompiledTemplateRegistry.Count} registered (hash-gated fast path active)"
+            : "Compiled templates: none registered — AST interpreter serves all renders");
         _themeManager.InitializeCaching(ThemeRoot);
         await _auditStore.InitializeAsync(_context, _config).ConfigureAwait(false);
     }

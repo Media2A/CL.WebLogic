@@ -1,0 +1,9 @@
+{layout:layouts/test-main}
+{section:head}<meta name="x" content="{model:title}">{/section}
+<h1>{model:title|uppercase}</h1>
+{if:model:count gt 2}MANY{else}FEW{/if}
+<ul>{foreach:model:rows as row}<li class="{if:loop:odd}odd{/if}">{loop:number}:{item:name}{foreach:row:tags}[{item:t}@{row:name}]{/foreach}</li>{/foreach}</ul>
+{switch:model:kind}{case:a}KA{/case}{default}KD{/default}{/switch}
+{partial:partials/test-card title="Hello" rows=model:rows}
+{verbatim}<script>var x={a:1};</script>{/verbatim}
+{model:n|number:2} {model:missing|default:"none"} {ifnot:auth}ANON{/ifnot}

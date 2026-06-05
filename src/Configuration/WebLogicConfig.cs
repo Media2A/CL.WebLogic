@@ -68,6 +68,28 @@ public sealed class ThemeConfig
     [ConfigField(Label = "Enable Template Cache", Description = "Cache parsed templates in memory.",
         Group = "Theme", Order = 17, Collapsed = true)]
     public bool EnableCaching { get; set; } = true;
+
+    /// <summary>
+    /// Render templates through the AST engine (parse once, walk the cached tree)
+    /// instead of the legacy regex pipeline. The AST engine is byte-compatible on
+    /// the legacy construct set and additionally supports {verbatim}, {else},
+    /// {elseif}, {switch}, comparison conditions, parameterised partials, loop
+    /// metadata/aliasing and the extended filter set. Disable only to fall back
+    /// to the legacy pipeline while diagnosing a rendering difference.
+    /// </summary>
+    [ConfigField(Label = "Use AST Engine", Description = "Parse-once AST rendering (faster; required for compiled templates). Disable to fall back to the legacy regex pipeline.",
+        Group = "Theme", Order = 18, Collapsed = true)]
+    public bool UseAstEngine { get; set; } = true;
+
+    /// <summary>
+    /// Use build-time compiled templates (CL.WebLogic.TemplateCompiler) when a
+    /// compiled class is registered for a path AND its source hash matches the
+    /// live file. Stale or unknown templates always fall back to the AST
+    /// interpreter, so this is a pure fast path — never a correctness risk.
+    /// </summary>
+    [ConfigField(Label = "Use Compiled Templates", Description = "Prefer build-time compiled template renderers when their source hash matches the live file. Falls back to the interpreter otherwise.",
+        Group = "Theme", Order = 19, Collapsed = true)]
+    public bool UseCompiledTemplates { get; set; } = true;
 }
 
 public enum ThemeSource
