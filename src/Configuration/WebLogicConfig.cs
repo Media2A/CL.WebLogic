@@ -126,10 +126,12 @@ public sealed class SecurityConfig
 
     /// <summary>
     /// Optional app-provided hook that lets the host application short-circuit
-    /// the DNSBL check for IPs it considers trusted (e.g. a trust-on-first-use
-    /// allowlist populated when an authenticated bearer-token request lands).
-    /// Returns <c>true</c> to bypass DNSBL for the given IP. Set at runtime, not
-    /// from config — hence not serialised and not in the admin form.
+    /// the generic IP rate limiter and DNSBL check for addresses it considers
+    /// trusted (e.g. a trust-on-first-use allowlist populated when an
+    /// authenticated bearer-token request lands).
+    /// Returns <c>true</c> to bypass both checks for the given IP. Set at
+    /// runtime, not from config — hence not serialised and not in the admin
+    /// form.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public Func<string, Task<bool>>? IpAllowlistResolver { get; set; }

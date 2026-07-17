@@ -155,48 +155,45 @@ public sealed class WebSecurityService
             };
         }
 
-        if (!CheckRateLimit(request.ClientIp))
+        // Resolve trusted IPs before the generic rate bucket. Hosts use this
+        // hook for authenticated machine callers (for example game servers
+        // auto-pinned after their first valid bearer-token request). The
+        // allowlist must bypass rate limiting as well as DNSBL; checking the
+        // bucket first made a configured "rate-limit bypass" ineffective.
+        var allowlisted = false;
+        var allowlist = _config.Security.IpAllowlistResolver;
+        if (allowlist is not null)
+        {
+            try { allowlisted = await allowlist(request.ClientIp).ConfigureAwait(false); }
+            catch (Exception ex) { _context.Logger.Warning($"IpAllowlistResolver threw: {ex.Message}"); }
+        }
+
+        if (!allowlisted && !CheckRateLimit(request.ClientIp))
         {
             PublishBlockedEvent(request, StatusCodes.Status429TooManyRequests, "rate_limited");
             return WebResult.Text("Too many requests", StatusCodes.Status429TooManyRequests);
         }
 
-        if (_config.Security.EnableDnsbl)
+        if (_config.Security.EnableDnsbl && !allowlisted)
         {
-            // Check the app-provided allowlist hook first. Hosts use this to
-            // bypass DNSBL for IPs they've already vouched for (typically via a
-            // trust-on-first-use list populated when an authenticated request
-            // landed). Skipping the network round-trip on the hot path keeps
-            // game-server / bearer-token traffic snappy.
-            var allowlist = _config.Security.IpAllowlistResolver;
-            var allowlisted = false;
-            if (allowlist is not null)
+            var library = Libraries.Get<NetUtilsLibrary>();
+            if (library is not null)
             {
-                try { allowlisted = await allowlist(request.ClientIp).ConfigureAwait(false); }
-                catch (Exception ex) { _context.Logger.Warning($"IpAllowlistResolver threw: {ex.Message}"); }
-            }
-
-            if (!allowlisted)
-            {
-                var library = Libraries.Get<NetUtilsLibrary>();
-                if (library is not null)
+                try
                 {
-                    try
+                    var result = await library.Dnsbl.CheckIpAsync(request.ClientIp).ConfigureAwait(false);
+                    if (result.IsBlacklisted)
                     {
-                        var result = await library.Dnsbl.CheckIpAsync(request.ClientIp).ConfigureAwait(false);
-                        if (result.IsBlacklisted)
-                        {
-                            PublishBlockedEvent(
-                                request,
-                                StatusCodes.Status403Forbidden,
-                                $"dnsbl:{result.MatchedService ?? "matched"}");
-                            return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
-                        }
+                        PublishBlockedEvent(
+                            request,
+                            StatusCodes.Status403Forbidden,
+                            $"dnsbl:{result.MatchedService ?? "matched"}");
+                        return WebResult.Text("Forbidden", StatusCodes.Status403Forbidden);
                     }
-                    catch (Exception ex)
-                    {
-                        _context.Logger.Warning($"DNSBL check failed: {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _context.Logger.Warning($"DNSBL check failed: {ex.Message}");
                 }
             }
         }
