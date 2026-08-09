@@ -27,9 +27,6 @@ public sealed class WebLogicConfig : ConfigModelBase
         if (Theme.Source == ThemeSource.Git && string.IsNullOrWhiteSpace(Theme.RepositoryUrl))
             errors.Add("Theme.RepositoryUrl is required when Theme.Source is Git.");
 
-        if (Storage.Mode == WebStorageMode.S3 && string.IsNullOrWhiteSpace(Storage.S3Bucket))
-            errors.Add("Storage.S3Bucket is required when Storage.Mode is S3.");
-
         return errors.Count == 0 ? ConfigValidationResult.Valid() : ConfigValidationResult.Invalid(errors);
     }
 }
@@ -269,23 +266,20 @@ public sealed class StorageConfig
         RequiresRestart = true, Group = "Storage", Order = 81)]
     public string LocalRoot { get; set; } = "theme";
 
-    [ConfigField(Label = "S3 Connection ID", Description = "Matches a connection registered with CL.StorageS3.",
+    [ConfigField(Label = "Storage Connection ID", Description = "Mounted connection registered with CodeLogic.Storage. Leave blank to use its default connection.",
         RequiresRestart = true, Group = "Storage", Order = 82)]
-    public string S3ConnectionId { get; set; } = "Default";
+    public string ConnectionId { get; set; } = "";
 
-    [ConfigField(Label = "S3 Bucket", Placeholder = "my-app-bucket",
-        RequiresRestart = true, Group = "Storage", Order = 83)]
-    public string S3Bucket { get; set; } = "";
+    [ConfigField(Label = "Storage Path Prefix", Description = "Optional path below the mounted storage root.",
+        Group = "Storage", Order = 83, Collapsed = true)]
+    public string PathPrefix { get; set; } = "";
 
-    [ConfigField(Label = "S3 Key Prefix", Description = "Prepended to every key (for shared buckets).",
-        Group = "Storage", Order = 84, Collapsed = true)]
-    public string S3Prefix { get; set; } = "";
 }
 
 public enum WebStorageMode
 {
-    Local,
-    S3
+    Local = 0,
+    Storage = 1
 }
 
 public sealed class WidgetConfig

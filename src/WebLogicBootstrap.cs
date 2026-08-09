@@ -1,7 +1,7 @@
 using CL.Common;
 using CL.GitHelper;
 using CL.NetUtils;
-using CL.StorageS3;
+using CL.Storage;
 using CodeLogic;
 
 namespace CL.WebLogic;
@@ -13,7 +13,7 @@ public static class WebLogicBootstrap
         {
             IncludeCommon = includeOptionalInfrastructure,
             IncludeGitHelper = includeOptionalInfrastructure,
-            IncludeStorageS3 = includeOptionalInfrastructure,
+            IncludeStorage = includeOptionalInfrastructure,
             IncludeNetUtils = includeOptionalInfrastructure
         });
 
@@ -25,8 +25,8 @@ public static class WebLogicBootstrap
         if (options.IncludeGitHelper)
             await Libraries.LoadAsync<GitHelperLibrary>().ConfigureAwait(false);
 
-        if (options.IncludeStorageS3)
-            await Libraries.LoadAsync<StorageS3Library>().ConfigureAwait(false);
+        if (options.IncludeStorage)
+            await Libraries.LoadAsync<StorageLibrary>().ConfigureAwait(false);
 
         if (options.IncludeNetUtils)
             await Libraries.LoadAsync<NetUtilsLibrary>().ConfigureAwait(false);
@@ -39,6 +39,6 @@ public sealed class WebLogicBootstrapOptions
 {
     public bool IncludeCommon { get; set; }
     public bool IncludeGitHelper { get; set; }
-    public bool IncludeStorageS3 { get; set; }
+    public bool IncludeStorage { get; set; }
     public bool IncludeNetUtils { get; set; }
 }

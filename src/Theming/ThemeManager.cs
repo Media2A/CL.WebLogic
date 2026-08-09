@@ -6,7 +6,7 @@ using CL.Common.FileHandling;
 using CL.Common.Web;
 using CL.GitHelper;
 using CL.GitHelper.Models;
-using CL.StorageS3;
+using CL.Storage;
 using CL.WebLogic.Configuration;
 using CL.WebLogic.Routing;
 using CL.WebLogic.Runtime;
@@ -453,8 +453,8 @@ public sealed partial class ThemeManager
 
     private async Task<byte[]?> ReadBytesAsync(string relativePath, string? themeRoot)
     {
-        if (_config.Storage.Mode == WebStorageMode.S3)
-            return await ReadBytesFromS3Async(relativePath).ConfigureAwait(false);
+        if (_config.Storage.Mode != WebStorageMode.Local)
+            return await ReadBytesFromStorageAsync(relativePath).ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(themeRoot))
             return null;
@@ -474,18 +474,22 @@ public sealed partial class ThemeManager
         return result.Value;
     }
 
-    private async Task<byte[]?> ReadBytesFromS3Async(string relativePath)
+    private async Task<byte[]?> ReadBytesFromStorageAsync(string relativePath)
     {
-        var storage = Libraries.Get<StorageS3Library>();
+        var storage = Libraries.Get<StorageLibrary>();
         if (storage is null)
             return null;
 
-        var service = storage.GetService(_config.Storage.S3ConnectionId);
-        var key = string.IsNullOrWhiteSpace(_config.Storage.S3Prefix)
+        var connectionId = _config.Storage.ConnectionId;
+        var service = string.IsNullOrWhiteSpace(connectionId)
+            ? storage.DefaultStorage
+            : storage.GetStorage(connectionId);
+        var prefix = _config.Storage.PathPrefix;
+        var key = string.IsNullOrWhiteSpace(prefix)
             ? relativePath
-            : $"{_config.Storage.S3Prefix.TrimEnd('/')}/{relativePath}";
+            : $"{prefix.TrimEnd('/')}/{relativePath}";
 
-        var result = await service.GetObjectAsync(_config.Storage.S3Bucket, key).ConfigureAwait(false);
+        var result = await service.DownloadBytesAsync(key).ConfigureAwait(false);
         return result.IsSuccess ? result.Value : null;
     }
 
