@@ -4,6 +4,40 @@
         <name>CL.MySQL2</name>
     </assembly>
     <members>
+        <member name="T:CL.MySQL2.Configuration.CacheConfiguration">
+            <summary>
+            Process-wide cache configuration for CL.MySQL2. Applies to all databases unless a
+            per-database override is set on <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.CacheEnabledOverride"/>.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.CacheConfiguration.Enabled">
+            <summary>Master switch for the query result cache.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.CacheConfiguration.MaxEntries">
+            <summary>Maximum number of cached entries across all databases.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.CacheConfiguration.MaxMemoryMb">
+            <summary>
+            Soft memory cap for the cache in megabytes. Currently advisory —
+            eviction uses entry count; memory accounting lands in a follow-up.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.CacheConfiguration.DefaultTtlSeconds">
+            <summary>
+            Default TTL used when <c>WithCache()</c> is called without arguments.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.CacheConfiguration.TimeQuantizeSeconds">
+            <summary>
+            Time-near-now closure values used as query parameters (e.g.
+            <c>DateTime.UtcNow.AddDays(-30)</c>) are rounded down to this window when
+            forming the cache key. Without this, every call produces a unique cache key
+            and nothing ever hits. Set to 0 to disable and use raw timestamps.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.CacheConfiguration.PublishEvents">
+            <summary>Whether the cache publishes hit/miss events on the event bus.</summary>
+        </member>
         <member name="T:CL.MySQL2.Configuration.DatabaseConfiguration">
             <summary>
             Root configuration for <c>CL.MySQL2</c>.
@@ -76,10 +110,53 @@
         <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.Collation">
             <summary>Default collation. Default: "utf8mb4_unicode_ci".</summary>
         </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SyncMode">
+            <summary>
+            Primary schema sync knob. See <see cref="T:CL.MySQL2.Models.SyncMode"/>.
+            Default: <see cref="F:CL.MySQL2.Models.SyncMode.Production"/> (safe/additive, never drops).
+            </summary>
+            <remarks>
+            <list type="bullet">
+              <item><b>Developer</b> — aggressive rolling updates; drops removed columns/indexes/FKs without asking (every boot).</item>
+              <item><b>Production</b> — default. Additive only; never drops. A change needing a drop is deferred and flagged <c>DriftPending</c>.</item>
+              <item><b>Migration</b> — deliberate one-shot destructive reconcile (with backup). Idempotent; warns to switch back to Production once done.</item>
+            </list>
+            In all modes, models whose stored CRC in <c>__schema_state</c> matches the current model are skipped entirely.
+            </remarks>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SchemaSyncLevel">
+            <summary>
+            Legacy. Lower-level sync aggressiveness. Retained for back-compat; <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SyncMode"/>
+            takes precedence and maps onto this. See <see cref="T:CL.MySQL2.Models.SchemaSyncLevel"/>.
+            </summary>
+            <remarks>
+            <list type="bullet">
+              <item><b>None</b> — no sync at all.</item>
+              <item><b>Safe</b> — add missing columns/indexes/FKs + modify existing columns. Never drops.</item>
+              <item><b>Additive</b> — Safe + drop indexes and foreign keys no longer in the model.</item>
+              <item><b>Full</b> — Additive + drop columns no longer in the model. Development only.</item>
+            </list>
+            </remarks>
+        </member>
         <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.AllowDestructiveSync">
             <summary>
-            When false (default), the table sync will never DROP or TRUNCATE existing data.
-            Set to true only in development environments.
+            Legacy flag. When true, sync operates at <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Full"/>
+            regardless of <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SchemaSyncLevel"/>. Prefer setting <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SyncMode"/> directly.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.IsMigrationMode">
+            <summary>
+            True when this database is configured for the one-shot <see cref="F:CL.MySQL2.Models.SyncMode.Migration"/> mode.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.EffectiveSyncLevel">
+            <summary>
+            Effective internal sync level. An explicitly chosen <see cref="F:CL.MySQL2.Models.SyncMode.Developer"/> or
+            <see cref="F:CL.MySQL2.Models.SyncMode.Migration"/> always maps to <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Full"/>. Otherwise
+            (<see cref="F:CL.MySQL2.Models.SyncMode.Production"/>, the default) the legacy <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SchemaSyncLevel"/> /
+            <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.AllowDestructiveSync"/> knobs are honored for back-compat — so an old config with
+            <c>SchemaSyncLevel = Full</c> still behaves destructively, while a fresh Production config
+            (default <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Safe"/>) never drops.
             </summary>
         </member>
         <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.BackupDirectory">
@@ -91,6 +168,59 @@
         <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SlowQueryThresholdMs">
             <summary>Queries exceeding this threshold (ms) are logged as slow queries. Default: 1000.</summary>
         </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.CacheEnabledOverride">
+            <summary>
+            Per-database override for the global cache switch. Null = inherit global
+            <see cref="P:CL.MySQL2.Configuration.CacheConfiguration.Enabled"/>; true/false forces on/off for this DB.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.QueryTimeoutMs">
+            <summary>
+            Default per-query timeout in milliseconds. Maps to MySqlConnector's command timeout
+            when it's finer than <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.CommandTimeout"/> (which is in seconds).
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.MaxBatchInsertSize">
+            <summary>Chunk size used by <c>InsertManyAsync</c> when emitting batched INSERTs.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.MaxInClauseValues">
+            <summary>Maximum number of values allowed in a parameterized IN (...) clause.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.PreparedStatementCacheSize">
+            <summary>Per-connection prepared statement cache size.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.TransientRetryCount">
+            <summary>
+            How many times to automatically retry a single non-transactional statement that
+            fails with a transient error (deadlock 1213, lock-wait timeout 1205). 0 disables.
+            Default: 3. Statements inside an explicit transaction scope are never auto-retried —
+            the whole transaction must be retried by the caller.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.TransientRetryBaseDelayMs">
+            <summary>
+            Base backoff in milliseconds for transient retries; the delay grows exponentially
+            (base × 2^attempt) with a little random jitter. Default: 50.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.N1DetectorThreshold">
+            <summary>
+            Warn when the same query template fires this many times inside a single request
+            scope (AsyncLocal). 0 disables the detector.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.CaptureExplainOnSlowQuery">
+            <summary>
+            When a slow query is detected, automatically capture <c>EXPLAIN FORMAT=JSON</c>
+            and attach it to the <c>SlowQueryEvent</c>.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.DefaultStringSize">
+            <summary>
+            Default VARCHAR length when a string property has no explicit
+            <c>[Column(Size = …)]</c>. Default: 255.
+            </summary>
+        </member>
         <member name="M:CL.MySQL2.Configuration.MySqlDatabaseConfig.BuildConnectionString">
             <summary>
             Builds and returns the MySqlConnector connection string from the current configuration.
@@ -100,6 +230,75 @@
             <summary>
             Validates the per-database configuration.
             </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.ClosureEvaluator">
+            <summary>
+            Evaluates the runtime value of a closure / constant expression encountered while
+            translating a LINQ expression tree to SQL. The fast path handles the shapes that
+            account for nearly all real-world predicates — bare constants, member chains
+            rooted in a captured constant, and identity casts — using O(depth) reflection.
+            Only genuinely dynamic shapes fall back to <see cref="M:System.Linq.Expressions.Expression.Lambda(System.Linq.Expressions.Expression,System.Linq.Expressions.ParameterExpression[])"/>
+            + Compile, so the typical <c>Where(x =&gt; x.Foo == localVar)</c> pays a field
+            read instead of a JIT compile per call.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.ClosureEvaluator.Evaluate(System.Linq.Expressions.Expression)">
+            <summary>
+            Resolve the runtime value of an expression that does not reference a row parameter.
+            Tries the structural fast path first; falls back to delegate compilation only when
+            the expression has a shape the fast path does not recognise.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.ClosureEvaluator.TryFastEvaluate(System.Linq.Expressions.Expression,System.Object@)">
+            <summary>
+            Attempt to resolve the value of an expression without compiling a delegate.
+            Returns <c>true</c> for the recognised shapes, <c>false</c> otherwise.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.EntityMetadata`1">
+            <summary>
+            Single source of truth for reflected metadata about entity type <typeparamref name="T"/>.
+            Populated once per type on first access and held for the lifetime of the AppDomain.
+            Replaces the per-file caches that previously lived in <c>Repository</c>,
+            <c>QueryBuilder</c>, and <c>SchemaAnalyzer</c>.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Core.EntityMetadata`1.SoftDeleteColumn">
+            <summary>
+            The soft-delete timestamp column when the entity carries <see cref="T:CL.MySQL2.Models.SoftDeleteAttribute"/>,
+            else null. Reads filter on <c>{column} IS NULL</c> and deletes set it to UtcNow.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Core.EntityMetadata`1.Materializer">
+            <summary>
+            Compiled row materializer: reads a <see cref="T:MySqlConnector.MySqlDataReader"/> positioned on a row
+            and returns a fully hydrated <typeparamref name="T"/>. Uses column ordinals resolved
+            once per query (see <see cref="M:CL.MySQL2.Core.Materializer`1.CompileForReader(MySqlConnector.MySqlDataReader)"/>).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.EntityMetadata`1.TryResolve(System.String)">
+            <summary>
+            Resolves a property-name / column-name string to its metadata. Accepts both forms
+            (property name or mapped column name) for caller convenience.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.EntityMetadata`1.RequireColumn(System.String)">
+            <summary>
+            Resolves and throws with a helpful message if the name is unknown. Used by string-
+            parameter APIs (e.g. <c>GetByColumnAsync(column, value)</c>) to prevent SQL injection
+            via arbitrary column names.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.ColumnMetadata">
+            <summary>
+            Per-column reflected metadata. Lazily computed fields are populated on first access.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Core.ColumnMetadata.Get">
+            <summary>Compiled getter — avoids PropertyInfo.GetValue reflection cost.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Core.ColumnMetadata.Set">
+            <summary>Compiled setter.</summary>
         </member>
         <member name="T:CL.MySQL2.Core.MySqlExpressionVisitor">
             <summary>
@@ -117,9 +316,141 @@
             <param name="tableAlias">Optional table alias prefix for column references.</param>
             <returns>SQL fragment and parameter dictionary.</returns>
         </member>
+        <member name="M:CL.MySQL2.Core.MySqlExpressionVisitor.TranslateMulti(System.Linq.Expressions.LambdaExpression,System.Collections.Generic.IReadOnlyDictionary{System.Linq.Expressions.ParameterExpression,System.String})">
+            <summary>
+            Translates a multi-source predicate (e.g. a join predicate
+            <c>(l, r) =&gt; l.X == r.Y &amp;&amp; l.Active</c>) into a SQL fragment whose column
+            references are qualified by the alias mapped to each lambda parameter.
+            </summary>
+            <param name="predicate">The predicate lambda body to translate.</param>
+            <param name="aliasMap">Maps each lambda parameter to its table alias (e.g. l→t0, r→t1).</param>
+        </member>
         <member name="M:CL.MySQL2.Core.MySqlExpressionVisitor.TranslateSelector``2(System.Linq.Expressions.Expression{System.Func{``0,``1}})">
             <summary>
             Translates a member selector lambda into a column name string.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.MySqlExpressionVisitor.QualifyColumn(System.Reflection.MemberInfo,System.Linq.Expressions.Expression)">
+            <summary>
+            Builds a backtick-quoted column reference, qualified by the alias mapped to
+            <paramref name="owner"/> when a multi-source alias map is in play, or by the single
+            <c>_tableAlias</c> otherwise. With no alias the column is left unqualified — exactly
+            the single-table behaviour that predates joins.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.MySqlExpressionVisitor.EscapeLikeValue(System.Object)">
+            <summary>
+            Escapes LIKE special characters (%, _, \) in a user-supplied value so it is treated
+            as a literal, not as a wildcard pattern. Non-string values pass through unchanged.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.JoinTranslator">
+            <summary>
+            Translation helpers specific to typed joins: turning key selectors into the
+            <c>ON</c> clause and turning a two-source result selector into a SELECT list +
+            ordered column descriptors. Predicate (<c>WHERE</c>) translation is delegated to
+            <see cref="M:CL.MySQL2.Core.MySqlExpressionVisitor.TranslateMulti(System.Linq.Expressions.LambdaExpression,System.Collections.Generic.IReadOnlyDictionary{System.Linq.Expressions.ParameterExpression,System.String})"/>; this class only covers the
+            column-reference shapes that joins introduce.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.JoinTranslator.KeyColumns(System.Linq.Expressions.LambdaExpression,System.String)">
+            <summary>
+            Extracts the key columns of a join key selector, each qualified by
+            <paramref name="alias"/>. Supports a single member (<c>o =&gt; o.CustomerId</c>)
+            and a composite anonymous key (<c>o =&gt; new { o.A, o.B }</c>).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.JoinTranslator.OnClause(System.Linq.Expressions.LambdaExpression,System.String,System.Linq.Expressions.LambdaExpression,System.String)">
+            <summary>
+            Builds the <c>ON</c> clause by pairing left and right key columns positionally.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.JoinTranslator.OrderColumn(System.Linq.Expressions.Expression,System.Collections.Generic.IReadOnlyDictionary{System.Linq.Expressions.ParameterExpression,System.String})">
+            <summary>
+            Translates an <c>ORDER BY</c> selector member to its qualified column reference.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.JoinTranslator.ProjectionColumns(System.Linq.Expressions.Expression,System.Collections.Generic.IReadOnlyDictionary{System.Linq.Expressions.ParameterExpression,System.String})">
+            <summary>
+            Walks a two-source result selector and produces the ordered
+            (SQL fragment, alias, CLR type) column descriptors that
+            <see cref="M:CL.MySQL2.Core.ProjectionCompiler.CompileFromColumns``2(System.Linq.Expressions.Expression,System.Collections.Generic.List{System.ValueTuple{System.String,System.String,System.Type}})"/> consumes.
+            Supports anonymous types, positional records, member-init, and a single
+            scalar column — mirroring the single-source <see cref="T:CL.MySQL2.Core.ProjectionCompiler"/>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.Materializer`1">
+            <summary>
+            Builds and caches compiled row-materializer delegates for entity type <typeparamref name="T"/>.
+            <para>
+            Column order in the incoming reader is not fixed (depends on SELECT list, projections, joins),
+            so materializers are keyed by a reader-shape fingerprint: the ordered tuple of
+            (columnName) pairs exposed by the reader. A given fingerprint is hit ≥99% of the time after
+            first compile for any stable query.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.Materializer`1.CompileForReader(MySqlConnector.MySqlDataReader)">
+            <summary>
+            Returns a compiled materializer for the reader's current shape (set of columns and
+            their ordinals). The first call for a given shape incurs a one-time IL-gen cost;
+            subsequent calls for the same shape are cache hits.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.ProjectionCompiler">
+            <summary>
+            Turns a projection lambda like <c>s =&gt; new { s.A, s.B }</c> or
+            <c>s =&gt; new Foo(s.A, s.B + 1)</c> into:
+            <list type="bullet">
+              <item>a SQL <c>SELECT</c> column list with aliases, and</item>
+              <item>a compiled <c>Func&lt;MySqlDataReader, TResult&gt;</c> that pulls values out of
+                the reader by ordinal and builds the projected shape.</item>
+            </list>
+            Supports anonymous types (the common case), positional records (ctor binding), and
+            simple member-init expressions.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Core.ProjectionCompiler.Compiled`2.SelectList">
+            <summary>SQL fragment: comma-separated columns/aliases for SELECT list.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Core.ProjectionCompiler.Compiled`2.Columns">
+            <summary>Ordered list of (column expression, alias). Alias is what the reader sees.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Core.ProjectionCompiler.Compiled`2.Materializer">
+            <summary>Compiled row → TResult materializer keyed by reader shape (alias→ordinal).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.ProjectionCompiler.Compile``2(System.Linq.Expressions.Expression{System.Func{``0,``1}})">
+            <summary>
+            Compile a projection. Returns the SELECT list to embed in the SQL and a
+            materializer that hydrates a <typeparamref name="TResult"/> from the reader.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.ProjectionCompiler.CompileFromColumns``2(System.Linq.Expressions.Expression,System.Collections.Generic.List{System.ValueTuple{System.String,System.String,System.Type}})">
+            <summary>
+            Assemble a <see cref="T:CL.MySQL2.Core.ProjectionCompiler.Compiled`2"/> from a set of pre-translated column
+            expressions (as emitted by <see cref="T:CL.MySQL2.Core.SqlExpressionTranslator"/>). Used by
+            <c>GroupedQuery</c> where the translator already produced the SELECT fragments.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.ProjectionCompiler.TranslateColumnExpression(System.Linq.Expressions.Expression)">
+            <summary>
+            Translate a single column-level expression into a MySQL SQL fragment and carry
+            the CLR type so the materializer knows how to convert. Only covers the shapes the
+            SELECT visitor currently understands — the wider aggregation visitor (task #4)
+            will extend this with SqlFn and aggregates.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.ProjectionCompiler.BuildMaterializer``1(System.Linq.Expressions.Expression,System.Collections.Generic.List{System.ValueTuple{System.String,System.String,System.Type}})">
+            <summary>
+            Build a delegate that reads aliased columns from <see cref="T:MySqlConnector.MySqlDataReader"/> and
+            produces <typeparamref name="TResult"/>. Works for:
+            <list type="bullet">
+              <item><c>new { A, B }</c> — ctor call in the same order as the SELECT list</item>
+              <item>positional records — same</item>
+              <item><c>new Foo { A = ... }</c> — member-init with property bindings</item>
+              <item>scalar — single column extracted by alias</item>
+            </list>
+            Materializer uses <c>GetOrdinal(alias)</c> once on first row via a closure cache.
             </summary>
         </member>
         <member name="T:CL.MySQL2.Core.SchemaAnalyzer">
@@ -136,20 +467,171 @@
             Generates a CREATE TABLE IF NOT EXISTS statement for the given entity type.
             </summary>
         </member>
-        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.GenerateAlterStatementsAsync(System.Type,MySqlConnector.MySqlConnection,System.Threading.CancellationToken)">
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.ComputeSchemaCrc(System.Type)">
+            <summary>
+            Computes a stable CRC32 (8-char lowercase hex) of the entity's desired schema,
+            derived from <see cref="M:CL.MySQL2.Core.SchemaAnalyzer.GenerateCreateTable(System.Type)"/>. Used by the <c>__schema_state</c>
+            sentinel: when the stored CRC matches this value the table is skipped without any
+            <c>information_schema</c> diffing. The CRC is order-independent and ignores cosmetic
+            differences (the <c>IF NOT EXISTS</c> noise and whitespace).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.ComputeCrc(System.String)">
+            <summary>Computes a CRC32 (8-char lowercase hex) of an arbitrary string.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.NormalizeForCrc(System.String)">
+            <summary>
+            Returns the canonical, normalized form of a CREATE TABLE statement used as CRC input:
+            strips <c>IF NOT EXISTS</c>, trims and drops blank lines, and sorts the remaining lines
+            so reflection ordering can never change the hash for an unchanged model.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.GenerateAlterStatementsAsync(System.Type,MySqlConnector.MySqlConnection,CL.MySQL2.Models.SchemaSyncLevel,System.Threading.CancellationToken)">
             <summary>
             Compares the entity type definition against the live database schema and returns
-            a list of ALTER TABLE statements needed to bring the table in sync.
+            a list of ALTER TABLE statements needed to bring the table in sync at the given
+            <see cref="T:CL.MySQL2.Models.SchemaSyncLevel"/>.
             </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.ColumnNeedsModify(CL.MySQL2.Core.SchemaAnalyzer.ColumnInfo,System.Reflection.PropertyInfo,CL.MySQL2.Models.ColumnAttribute)">
+            <summary>
+            Thorough column-diff check. Returns true if the existing DB column differs from
+            the model in any meaningful way (type/size, nullability, auto-increment, default,
+            on-update-timestamp, charset, comment).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SchemaAnalyzer.ResolveColumnName(System.Type,System.String)">
+            <summary>
+            Map a property name (as written in <c>[Index(Include = …)]</c>) to the underlying
+            column name on the entity type. Missing properties throw a helpful error so
+            typos fail at schema-sync time, not silently at query time.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.SequentialGuid">
+            <summary>
+            Generates time-ordered UUIDv7 values optimized for use as BINARY(16) primary keys.
+            UUIDv7 embeds a Unix millisecond timestamp in the high bits, so sequential inserts
+            append to the B-tree instead of causing random page splits — dramatically reducing
+            index fragmentation compared to random UUIDv4.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SequentialGuid.NewId">
+            <summary>
+            Creates a new UUIDv7 (time-ordered, random tail). Use this instead of
+            <see cref="M:System.Guid.NewGuid"/> for columns with <c>StorageType = StorageType.Binary</c>
+            to get optimal insert performance and natural time-based ordering.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SequentialGuid.NewId(System.DateTimeOffset)">
+            <summary>
+            Creates a new UUIDv7 anchored to a specific timestamp. Useful for deterministic
+            testing or back-dating records.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.SqlExpressionTranslator">
+            <summary>
+            Translates column-level C# expressions into MySQL SQL fragments. This is the
+            read-side counterpart to <see cref="T:CL.MySQL2.Core.MySqlExpressionVisitor"/> (which handles WHERE
+            predicates). Covers what <c>Select</c> / grouped-<c>Select</c> / <c>GroupBy</c> keys
+            need: column access, arithmetic, <c>SqlFn.*</c>, ternary, aggregates.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlExpressionTranslator.Translate(System.Linq.Expressions.Expression,System.Linq.Expressions.ParameterExpression,System.Linq.Expressions.ParameterExpression,System.Linq.Expressions.Expression)">
+            <summary>
+            Translate an expression to SQL + its CLR result type, inside a context that may
+            or may not be grouped. When <paramref name="groupingParam"/> is non-null the
+            expression may reference <c>g.Key</c> and call <c>g.Sum/Avg/Min/Max/Count</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlExpressionTranslator.Visitor.VisitAggregate(System.Linq.Expressions.MethodCallExpression)">
+            <summary>
+            Handle <c>g.Sum(x =&gt; x.Foo)</c>, <c>g.Average(...)</c>, <c>g.Min/Max(...)</c>,
+            <c>g.Count()</c>, <c>g.Count(x =&gt; pred)</c>, <c>g.Any()</c>, <c>g.Any(pred)</c>.
+            The inner lambda's row parameter rebinds to the row param of this visitor.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Core.SqlFn">
+            <summary>
+            Marker methods recognized by the expression translator and rewritten into MySQL
+            function calls. Calls to these members are never executed at runtime in a query
+            context — the translator peels them out of the expression tree. Invoking them
+            directly outside a query throws, matching the pattern used by EF Core's
+            <c>EF.Functions</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Year(System.DateTime)">
+            <summary>MySQL <c>YEAR(d)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Month(System.DateTime)">
+            <summary>MySQL <c>MONTH(d)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Day(System.DateTime)">
+            <summary>MySQL <c>DAY(d)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Hour(System.DateTime)">
+            <summary>MySQL <c>HOUR(d)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Minute(System.DateTime)">
+            <summary>MySQL <c>MINUTE(d)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.DayOfWeek(System.DateTime)">
+            <summary>
+            Day of week, matching .NET's <c>DayOfWeek</c> numbering (0 = Sunday … 6 = Saturday).
+            MySQL's <c>DAYOFWEEK</c> is 1 = Sunday, so the translator emits <c>DAYOFWEEK(d) - 1</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Date(System.DateTime)">
+            <summary>MySQL <c>DATE(d)</c> — strips the time component.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.BucketUtc(System.DateTime,System.Int32)">
+            <summary>
+            Rounds <paramref name="d"/> down to the nearest <paramref name="seconds"/>-wide
+            bucket. Translates to
+            <c>FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(d)/seconds)*seconds)</c>. Use for time-
+            series bucketing in <c>GroupBy</c> keys.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Coalesce``1(``0[])">
+            <summary>MySQL <c>COALESCE(a, b, ...)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.IfNull``1(``0,``0)">
+            <summary>MySQL <c>IFNULL(v, fallback)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Lower(System.String)">
+            <summary>MySQL <c>LOWER(s)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Upper(System.String)">
+            <summary>MySQL <c>UPPER(s)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Concat(System.String[])">
+            <summary>MySQL <c>CONCAT(a, b, …)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Like(System.String,System.String)">
+            <summary>
+            MySQL <c>s LIKE pattern</c>. Unlike the <c>Contains</c>/<c>StartsWith</c>/<c>EndsWith</c>
+            visitor shortcuts, this passes <paramref name="pattern"/> through untouched — the
+            caller supplies <c>%</c>/<c>_</c> wildcards directly.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Round(System.Double,System.Int32)">
+            <summary>MySQL <c>ROUND(v, digits)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Floor(System.Double)">
+            <summary>MySQL <c>FLOOR(v)</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.SqlFn.Ceiling(System.Double)">
+            <summary>MySQL <c>CEILING(v)</c>.</summary>
         </member>
         <member name="T:CL.MySQL2.Core.TypeConverter">
             <summary>
             Converts between MySQL/CLR types and generates DDL type strings from <see cref="T:CL.MySQL2.Models.ColumnAttribute"/> metadata.
             </summary>
         </member>
-        <member name="M:CL.MySQL2.Core.TypeConverter.GetMySqlType(CL.MySQL2.Models.ColumnAttribute)">
+        <member name="M:CL.MySQL2.Core.TypeConverter.GetMySqlType(CL.MySQL2.Models.ColumnAttribute,CL.MySQL2.Models.StorageType,System.Type)">
             <summary>
             Returns the MySQL DDL type string for the given column attribute (e.g., "VARCHAR(255)", "DECIMAL(10,2)").
+            When <paramref name="storageType"/> is not <see cref="F:CL.MySQL2.Models.StorageType.Default"/> it overrides
+            the <see cref="P:CL.MySQL2.Models.ColumnAttribute.DataType"/>.
             </summary>
         </member>
         <member name="M:CL.MySQL2.Core.TypeConverter.ToDbValue(System.Object)">
@@ -164,10 +646,29 @@
             Handles DBNull, enums, and MySqlDateTime.
             </summary>
         </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.InferColumn(System.Type,System.Int32)">
+            <summary>
+            Infers a <see cref="T:CL.MySQL2.Models.ColumnAttribute"/> — not just a DataType — for a CLR type
+            lacking an explicit one. This lets us pick the right size for Guid, varchar,
+            etc. instead of silently falling back to MySQL defaults.
+            </summary>
+        </member>
         <member name="M:CL.MySQL2.Core.TypeConverter.InferDataType(System.Type)">
             <summary>
-            Infers the best-matching <see cref="T:CL.MySQL2.Models.DataType"/> for a CLR type.
-            Used when reflecting entity properties without explicit <see cref="T:CL.MySQL2.Models.ColumnAttribute"/>.
+            Legacy helper — preserved for SchemaAnalyzer call sites that only need the DataType.
+            Prefer <see cref="M:CL.MySQL2.Core.TypeConverter.InferColumn(System.Type,System.Int32)"/> which carries size/unsigned metadata.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.ToDbValue(System.Object,CL.MySQL2.Models.StorageType)">
+            <summary>
+            Converts a CLR value to a DB parameter value, applying <see cref="T:CL.MySQL2.Models.StorageType"/>-specific
+            conversions (e.g. <see cref="T:System.Guid"/> → big-endian <c>byte[16]</c> when stored as Binary).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Core.TypeConverter.FromDbValue(System.Object,System.Type,CL.MySQL2.Models.StorageType)">
+            <summary>
+            Converts a database value to the target CLR type, applying <see cref="T:CL.MySQL2.Models.StorageType"/>-specific
+            conversions (e.g. <c>byte[16]</c> → <see cref="T:System.Guid"/> when stored as Binary).
             </summary>
         </member>
         <member name="T:CL.MySQL2.Events.DatabaseConnectedEvent">
@@ -191,8 +692,46 @@
         <member name="T:CL.MySQL2.Events.SlowQueryEvent">
             <summary>Published when a query exceeds the configured slow-query threshold.</summary>
         </member>
-        <member name="M:CL.MySQL2.Events.SlowQueryEvent.#ctor(System.String,System.String,System.Int64,System.DateTime)">
+        <member name="M:CL.MySQL2.Events.SlowQueryEvent.#ctor(System.String,System.String,System.Int64,System.DateTime,System.String)">
             <summary>Published when a query exceeds the configured slow-query threshold.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.QueryExecutedEvent">
+            <summary>
+            Published after every query, fast or slow. Carries SQL text, elapsed ms, row count,
+            cache hit flag, and the connection it ran on. Subscribe for
+            dashboards / metrics / traces.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.QueryExecutedEvent.#ctor(System.String,System.String,System.Int64,System.Int32,System.Boolean,System.DateTime)">
+            <summary>
+            Published after every query, fast or slow. Carries SQL text, elapsed ms, row count,
+            cache hit flag, and the connection it ran on. Subscribe for
+            dashboards / metrics / traces.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.CacheHitEvent">
+            <summary>Published when a cached query result is returned.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.CacheHitEvent.#ctor(System.String,System.String,System.String,System.DateTime)">
+            <summary>Published when a cached query result is returned.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.CacheMissEvent">
+            <summary>Published on cache miss (query had to hit the DB).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.CacheMissEvent.#ctor(System.String,System.String,System.String,System.DateTime)">
+            <summary>Published on cache miss (query had to hit the DB).</summary>
+        </member>
+        <member name="T:CL.MySQL2.Events.N1QueryDetectedEvent">
+            <summary>
+            Published when the N+1 detector observes the same query template firing many times
+            within a single request scope. Fires once per scope per offending template.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Events.N1QueryDetectedEvent.#ctor(System.String,System.String,System.Int32,System.DateTime)">
+            <summary>
+            Published when the N+1 detector observes the same query template firing many times
+            within a single request scope. Fires once per scope per offending template.
+            </summary>
         </member>
         <member name="T:CL.MySQL2.Events.HealthChangedEvent">
             <summary>Published when the library's health state changes.</summary>
@@ -234,6 +773,14 @@
         </member>
         <member name="P:CL.MySQL2.Models.ColumnAttribute.Name">
             <summary>Custom column name. Defaults to the property name if null.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.PreviousName">
+            <summary>
+            Former column name, used by schema sync to <c>CHANGE COLUMN</c> (rename in place,
+            preserving data) instead of drop-old + add-new. Set this to the previous column
+            name when you rename a property/column; remove it once every environment has
+            synced. Default: null (no rename).
+            </summary>
         </member>
         <member name="P:CL.MySQL2.Models.ColumnAttribute.DataType">
             <summary>MySQL data type for the column.</summary>
@@ -277,6 +824,12 @@
         <member name="P:CL.MySQL2.Models.ColumnAttribute.OnUpdateCurrentTimestamp">
             <summary>Whether to add ON UPDATE CURRENT_TIMESTAMP (for TIMESTAMP/DATETIME).</summary>
         </member>
+        <member name="P:CL.MySQL2.Models.ColumnAttribute.StorageType">
+            <summary>
+            Optional physical-storage override. When set, takes precedence over <see cref="P:CL.MySQL2.Models.ColumnAttribute.DataType"/>
+            for DDL generation and may activate automatic value conversion.
+            </summary>
+        </member>
         <member name="T:CL.MySQL2.Models.ForeignKeyAttribute">
             <summary>
             Declares a foreign key constraint on a column property.
@@ -312,6 +865,35 @@
             Excludes a property from all database operations (read, write, schema sync).
             </summary>
         </member>
+        <member name="T:CL.MySQL2.Models.IndexAttribute">
+            <summary>
+            Declares an index on the annotated property. Supersedes <c>Column(Index=true)</c> —
+            provides control over the name, uniqueness, and covering <c>Include</c> columns.
+            Can appear multiple times per property for rare multi-index cases.
+            <para>
+            <b>Include</b> lets you build a covering index: leaf pages carry the named extra
+            columns so queries that filter on the indexed column and project only the included
+            columns can answer from the index alone (no PK lookup per row). Property names map
+            to their underlying column names via <see cref="P:CL.MySQL2.Models.ColumnAttribute.Name"/>.
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.IndexAttribute.Name">
+            <summary>
+            Optional index name. If null, the sync generates <c>idx_{table}_{column}</c>
+            (or <c>uq_{table}_{column}</c> for unique).
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.IndexAttribute.Unique">
+            <summary>Whether this is a UNIQUE index.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.IndexAttribute.Include">
+            <summary>
+            Additional property names stored at the index leaf (covering index). Use this
+            when you frequently <c>WHERE</c> on the indexed column and <c>SELECT</c> only
+            these extra columns — the query becomes an index-only scan.
+            </summary>
+        </member>
         <member name="T:CL.MySQL2.Models.CompositeIndexAttribute">
             <summary>
             Declares a composite index spanning multiple columns.
@@ -335,22 +917,89 @@
             <param name="indexName">Index name (unique within the table).</param>
             <param name="columnNames">One or more column names to include.</param>
         </member>
-        <member name="T:CL.MySQL2.Models.ManyToManyAttribute">
+        <member name="T:CL.MySQL2.Models.RetainDaysAttribute">
             <summary>
-            Marks a property as a many-to-many navigation property resolved via a junction table entity.
+            Declares a retention policy for the annotated entity. The library's background
+            purge worker periodically deletes rows whose <see cref="P:CL.MySQL2.Models.RetainDaysAttribute.TimestampColumn"/> is older
+            than <see cref="P:CL.MySQL2.Models.RetainDaysAttribute.Days"/>. Replaces hand-rolled cleanup jobs.
             </summary>
         </member>
-        <member name="P:CL.MySQL2.Models.ManyToManyAttribute.JunctionEntityType">
-            <summary>The CLR type of the junction table entity.</summary>
+        <member name="P:CL.MySQL2.Models.RetainDaysAttribute.Days">
+            <summary>Rows older than this many days are deleted.</summary>
         </member>
-        <member name="M:CL.MySQL2.Models.ManyToManyAttribute.#ctor(System.Type)">
+        <member name="P:CL.MySQL2.Models.RetainDaysAttribute.TimestampColumn">
             <summary>
-            Declares a many-to-many relationship via the specified junction entity type.
+            The property name on the entity that holds the timestamp to compare
+            (e.g. <c>nameof(FooRecord.CreatedUtc)</c>). Must map to a DATETIME column.
             </summary>
-            <param name="junctionEntityType">The junction table entity type.</param>
+        </member>
+        <member name="P:CL.MySQL2.Models.RetainDaysAttribute.BatchSize">
+            <summary>
+            How many rows to delete per batch. Keeps the delete transaction small.
+            Default: 5000.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.RetainDaysAttribute.#ctor(System.Int32,System.String)">
+            <param name="days">Retain rows for this many days.</param>
+            <param name="timestampColumn">Property name holding the timestamp to compare.</param>
+        </member>
+        <member name="T:CL.MySQL2.Models.SoftDeleteAttribute">
+            <summary>
+            Marks an entity for <b>soft deletes</b>. <see cref="M:CL.MySQL2.Services.Repository`1.DeleteAsync(System.Object,System.Threading.CancellationToken)"/>
+            sets the named timestamp column to the current UTC time instead of issuing a physical DELETE, and
+            reads through <c>mysql.Query&lt;T&gt;()</c> and the repository getters automatically exclude
+            rows where that column is set (<c>WHERE col IS NULL</c>). Opt back in to deleted rows with
+            <c>.IncludeDeleted()</c> on a query, or purge for real with
+            <see cref="M:CL.MySQL2.Services.Repository`1.HardDeleteAsync(System.Object,System.Threading.CancellationToken)"/>.
+            <para>
+            The referenced property must be a nullable <see cref="T:System.DateTime"/> mapped to a
+            NULL-able <c>DATETIME</c> column. Auto soft-delete filtering applies to single-table
+            queries and repository reads — not to joins, subqueries, or bulk
+            <c>UpdateAsync</c>/<c>DeleteAsync</c> on the query builder.
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SoftDeleteAttribute.TimestampColumn">
+            <summary>
+            Property name holding the soft-delete timestamp (a nullable <see cref="T:System.DateTime"/>),
+            e.g. <c>nameof(DeletedUtc)</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.SoftDeleteAttribute.#ctor(System.String)">
+            <param name="timestampColumn">Property name of the nullable DateTime soft-delete column.</param>
         </member>
         <member name="T:CL.MySQL2.Models.DataType">
             <summary>MySQL column data types.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.StorageType">
+            <summary>
+            Optional physical-storage override for a column. When set to anything other than
+            <see cref="F:CL.MySQL2.Models.StorageType.Default"/>, the storage type takes precedence over
+            <see cref="T:CL.MySQL2.Models.DataType"/> for DDL generation. For certain CLR types automatic value
+            conversion is applied (e.g. a <see cref="T:System.Guid"/> property with
+            <see cref="F:CL.MySQL2.Models.StorageType.Binary"/> is stored as <c>BINARY(16)</c> with big-endian byte conversion).
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.Default">
+            <summary>No override — use <see cref="T:CL.MySQL2.Models.DataType"/> as-is.</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.Binary">
+            <summary>Fixed-length binary. Uses <see cref="P:CL.MySQL2.Models.ColumnAttribute.Size"/> for explicit length; for <see cref="T:System.Guid"/> auto-sizes to 16.</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.VarBinary">
+            <summary>Variable-length binary. Uses <see cref="P:CL.MySQL2.Models.ColumnAttribute.Size"/> (default 255).</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.TinyBlob">
+            <summary>Tiny binary large object (max 255 bytes).</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.Blob">
+            <summary>Binary large object (max 65 535 bytes).</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.MediumBlob">
+            <summary>Medium binary large object (max 16 MB).</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.StorageType.LongBlob">
+            <summary>Long binary large object (max 4 GB).</summary>
         </member>
         <member name="T:CL.MySQL2.Models.TableEngine">
             <summary>MySQL storage engine options.</summary>
@@ -361,8 +1010,140 @@
         <member name="T:CL.MySQL2.Models.SortOrder">
             <summary>Sort order for query results.</summary>
         </member>
-        <member name="T:CL.MySQL2.Models.OperationType">
-            <summary>Type of DML operation performed on a record.</summary>
+        <member name="T:CL.MySQL2.Models.SchemaSyncLevel">
+            <summary>
+            Controls how aggressively the table sync service reconciles the live database
+            schema with entity definitions. Higher levels allow more destructive operations.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SchemaSyncLevel.None">
+            <summary>Skip sync entirely. No ALTER/CREATE statements are issued.</summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SchemaSyncLevel.Safe">
+            <summary>
+            Default. Adds missing columns, indexes and foreign keys, and modifies existing
+            columns to match the model (grow VARCHAR, toggle NULL, update default, etc.).
+            Never drops anything.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SchemaSyncLevel.Additive">
+            <summary>
+            Safe + drops indexes and foreign keys that no longer exist in the model.
+            No column data is lost.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SchemaSyncLevel.Full">
+            <summary>
+            Additive + drops columns that no longer exist in the model, and allows full
+            DROP TABLE rebuild when used together with backups. Intended for development only.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.SyncMode">
+            <summary>
+            Operator-facing schema sync mode. This is the primary knob exposed in configuration;
+            it maps onto an internal <see cref="T:CL.MySQL2.Models.SchemaSyncLevel"/> and governs how the CRC-gated
+            <c>__schema_state</c> sentinel reconciles the database with the entity models.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SyncMode.Developer">
+            <summary>
+            Rolling-update development mode. Reconciles aggressively on every boot, dropping
+            removed columns/indexes/FKs without asking (maps to <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Full"/>).
+            Unchanged models are still skipped via their stored CRC.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SyncMode.Production">
+            <summary>
+            Default. Safe/additive only — adds and modifies columns/indexes/FKs but never drops
+            (maps to <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Safe"/>). When a model change would require a drop,
+            the change is deferred and the table is flagged <c>DriftPending</c> for a later Migration pass.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Models.SyncMode.Migration">
+            <summary>
+            Deliberate one-shot destructive reconcile (maps to <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Full"/>,
+            with a schema backup taken first). Idempotent: once every model matches its stored CRC and
+            no drift is pending, the pass does nothing and logs a warning to switch back to
+            <see cref="F:CL.MySQL2.Models.SyncMode.Production"/>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.MigrationVersion">
+            <summary>
+            Identifies a migration's position in the ordered sequence: the application version it ships
+            with, then an explicit order within that version. Sorts by semantic version, then order.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.MigrationVersion.#ctor(System.String,System.Int32)">
+            <summary>
+            Identifies a migration's position in the ordered sequence: the application version it ships
+            with, then an explicit order within that version. Sorts by semantic version, then order.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.MigrationVersion.CompareTo(CL.MySQL2.Models.MigrationVersion)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.Models.MigrationVersion.IsAtOrBelow(System.String)">
+            <summary>True when this version is at or below <paramref name="appVersion"/> (semver compare).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.MigrationVersion.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.Models.MigrationVersion.CompareSemVer(System.String,System.String)">
+            <summary>
+            Compares two dotted version strings numerically (major.minor.patch.…). Non-numeric or
+            missing components are treated as 0, so "1.2" == "1.2.0". Pre-release tags are ignored.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.IMigration">
+            <summary>
+            An explicit, ordered, imperative migration — for data transforms, seeds, and semantic schema
+            changes that the declarative CRC-gated sync cannot express. Discovered by registration or
+            assembly scan and run by the <see cref="T:CL.MySQL2.Services.MigrationRunner"/> in <see cref="P:CL.MySQL2.Models.IMigration.Version"/> order.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.IMigration.Version">
+            <summary>The migration's ordered position.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.IMigration.Description">
+            <summary>Human-readable description recorded in the <c>__migrations</c> history.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.IMigration.UpAsync(CL.MySQL2.Services.IMigrationContext,System.Threading.CancellationToken)">
+            <summary>Applies the migration. Runs inside a transaction owned by the runner.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Models.IMigration.DownAsync(CL.MySQL2.Services.IMigrationContext,System.Threading.CancellationToken)">
+            <summary>
+            Reverts the migration. Override to enable rollback; the default
+            <see cref="T:CL.MySQL2.Models.Migration"/> base throws <see cref="T:System.NotSupportedException"/>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Models.Migration">
+            <summary>
+            Convenience base for <see cref="T:CL.MySQL2.Models.IMigration"/>. Supplies <see cref="P:CL.MySQL2.Models.Migration.Version"/> and
+            <see cref="P:CL.MySQL2.Models.Migration.Description"/> from the constructor and a <see cref="M:CL.MySQL2.Models.Migration.DownAsync(CL.MySQL2.Services.IMigrationContext,System.Threading.CancellationToken)"/> that throws
+            (override it to make the migration reversible).
+            </summary>
+            <remarks>
+            Note that MySQL implicitly commits on DDL. A migration that mixes <c>ALTER</c> with data
+            changes is therefore not atomic — prefer keeping <see cref="M:CL.MySQL2.Models.Migration.UpAsync(CL.MySQL2.Services.IMigrationContext,System.Threading.CancellationToken)"/> steps idempotent and
+            splitting heavy DDL and heavy backfill into separate migrations.
+            </remarks>
+        </member>
+        <member name="M:CL.MySQL2.Models.Migration.#ctor(System.String,System.Int32,System.String)">
+            <param name="appVersion">The app version this migration ships with (e.g. "1.4.0").</param>
+            <param name="order">Order within that version (applied ascending).</param>
+            <param name="description">Human-readable description.</param>
+        </member>
+        <member name="P:CL.MySQL2.Models.Migration.Version">
+            <inheritdoc/>
+        </member>
+        <member name="P:CL.MySQL2.Models.Migration.Description">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.Models.Migration.UpAsync(CL.MySQL2.Services.IMigrationContext,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:CL.MySQL2.Models.Migration.DownAsync(CL.MySQL2.Services.IMigrationContext,System.Threading.CancellationToken)">
+            <inheritdoc/>
         </member>
         <member name="T:CL.MySQL2.Models.PagedResult`1">
             <summary>
@@ -391,67 +1172,29 @@
         <member name="P:CL.MySQL2.Models.PagedResult`1.HasNextPage">
             <summary>True when there is a page after this one.</summary>
         </member>
-        <member name="T:CL.MySQL2.Models.WhereCondition">
+        <member name="T:CL.MySQL2.Models.CursorPagedResult`1">
             <summary>
-            A single WHERE predicate clause for use in dynamic queries.
+            Represents one forward-only page from a cursor-paged query.
+            </summary>
+            <typeparam name="T">The entity type.</typeparam>
+        </member>
+        <member name="P:CL.MySQL2.Models.CursorPagedResult`1.Items">
+            <summary>The items returned for this page.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.CursorPagedResult`1.PageSize">
+            <summary>The requested maximum number of items for the page.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.CursorPagedResult`1.NextCursor">
+            <summary>
+            The opaque cursor to pass to <c>After</c> for the next page, or <see langword="null"/>
+            when this is the final page.
             </summary>
         </member>
-        <member name="P:CL.MySQL2.Models.WhereCondition.Column">
-            <summary>The column name to filter on. Required.</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.WhereCondition.Operator">
-            <summary>Comparison operator (e.g., "=", "!=", ">", "LIKE"). Default: "=".</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.WhereCondition.Value">
-            <summary>The value to compare against.</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.WhereCondition.LogicalOperator">
-            <summary>Logical connector to the previous clause ("AND" or "OR"). Default: "AND".</summary>
-        </member>
-        <member name="T:CL.MySQL2.Models.OrderByClause">
-            <summary>
-            Specifies an ORDER BY clause for a query.
-            </summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.OrderByClause.Column">
-            <summary>The column to sort by. Required.</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.OrderByClause.Order">
-            <summary>Sort direction. Default: Asc.</summary>
-        </member>
-        <member name="T:CL.MySQL2.Models.JoinClause">
-            <summary>
-            Specifies a JOIN clause for a query.
-            </summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.JoinClause.Type">
-            <summary>The JOIN type. Default: Inner.</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.JoinClause.Table">
-            <summary>The table to join. Required.</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.JoinClause.Condition">
-            <summary>The ON condition (e.g., "a.id = b.a_id"). Required.</summary>
+        <member name="P:CL.MySQL2.Models.CursorPagedResult`1.HasNextPage">
+            <summary>True when another page is available.</summary>
         </member>
         <member name="T:CL.MySQL2.Models.JoinType">
             <summary>SQL JOIN types.</summary>
-        </member>
-        <member name="T:CL.MySQL2.Models.AggregateFunction">
-            <summary>
-            Describes a SQL aggregate function applied to a column.
-            </summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.AggregateFunction.Type">
-            <summary>The aggregate type (COUNT, SUM, etc.).</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.AggregateFunction.Column">
-            <summary>The column the function is applied to. Required.</summary>
-        </member>
-        <member name="P:CL.MySQL2.Models.AggregateFunction.Alias">
-            <summary>The alias for the result column. Required.</summary>
-        </member>
-        <member name="T:CL.MySQL2.Models.AggregateType">
-            <summary>SQL aggregate function types.</summary>
         </member>
         <member name="T:CL.MySQL2.Models.SyncResult">
             <summary>
@@ -472,6 +1215,21 @@
         </member>
         <member name="P:CL.MySQL2.Models.SyncResult.Duration">
             <summary>How long the sync took.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.Skipped">
+            <summary>
+            True when the table was skipped via the <c>__schema_state</c> CRC fast-path
+            (the model is unchanged), so no <c>information_schema</c> diffing or DDL ran.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.SchemaCrc">
+            <summary>The model's computed schema CRC, when available.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Models.SyncResult.DriftPending">
+            <summary>
+            True when an additive (Production) sync left a destructive change deferred
+            (the table was flagged <c>DriftPending</c> for a later Migration pass).
+            </summary>
         </member>
         <member name="T:CL.MySQL2.MySQL2Library">
             <summary>
@@ -521,6 +1279,12 @@
         <member name="P:CL.MySQL2.MySQL2Library.BackupManager">
             <summary>Returns the <see cref="P:CL.MySQL2.MySQL2Library.BackupManager"/>.</summary>
         </member>
+        <member name="P:CL.MySQL2.MySQL2Library.SchemaState">
+            <summary>Returns the <see cref="T:CL.MySQL2.Services.SchemaStateStore"/> (the <c>__schema_state</c> sentinel).</summary>
+        </member>
+        <member name="P:CL.MySQL2.MySQL2Library.Migrations">
+            <summary>Returns the <see cref="T:CL.MySQL2.Services.MigrationRunner"/> for explicit/imperative migrations.</summary>
+        </member>
         <member name="M:CL.MySQL2.MySQL2Library.GetRepository``1(System.String)">
             <summary>
             Creates a <see cref="T:CL.MySQL2.Services.Repository`1"/> for the given entity type.
@@ -535,6 +1299,28 @@
             <typeparam name="T">The entity type.</typeparam>
             <param name="connectionId">The connection ID to use. Default: "Default".</param>
         </member>
+        <member name="M:CL.MySQL2.MySQL2Library.SqlQueryAsync``1(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Runs a raw SQL query and materializes each row into <typeparamref name="T"/> using the
+            same compiled materializer as the typed query builder. Use named parameters
+            (<c>@p</c>) and pass values via <paramref name="parameters"/> — never interpolate
+            user input into <paramref name="sql"/>. Flows through observability and the transient
+            retry policy; results are not cached.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.ExecuteSqlAsync(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Runs a raw non-query statement (INSERT/UPDATE/DELETE/DDL) and returns the affected
+            row count. Same parameterization and retry/observability rules as
+            <see cref="M:CL.MySQL2.MySQL2Library.SqlQueryAsync``1(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Threading.CancellationToken)"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.SqlScalarAsync``1(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Runs a raw query returning a single scalar value (the first column of the first row),
+            converted to <typeparamref name="T"/>. Returns <c>default</c> when there are no rows.
+            </summary>
+        </member>
         <member name="M:CL.MySQL2.MySQL2Library.BeginTransactionAsync(System.String,System.Threading.CancellationToken)">
             <summary>
             Begins a new database transaction and returns a <see cref="T:CL.MySQL2.Services.TransactionScope"/>.
@@ -542,7 +1328,102 @@
         </member>
         <member name="M:CL.MySQL2.MySQL2Library.SyncTableAsync``1(System.Boolean,System.String)">
             <summary>
-            Syncs the table schema for the specified entity type.
+            Syncs the table schema for the specified entity type. The type is also registered
+            with the library so that entity-level workers (e.g. retention purge) pick it up.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.SyncSchemaAsync(System.Type[])">
+            <summary>
+            Syncs an entire set of entity types as one pass under a single cross-node lock, honoring
+            the configured <see cref="T:CL.MySQL2.Models.SyncMode"/>. This is the recommended entry point for application
+            startup: it applies the CRC fast-path per table and, in <see cref="F:CL.MySQL2.Models.SyncMode.Migration"/>,
+            logs the "already current — switch back to Production" warning once nothing is left to do.
+            </summary>
+            <param name="entities">The entity types whose tables to reconcile.</param>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.SyncSchemaAsync(System.Collections.Generic.IEnumerable{System.Type},System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Syncs a set of entity types as one pass. See <see cref="M:CL.MySQL2.MySQL2Library.SyncSchemaAsync(System.Type[])"/>.
+            </summary>
+            <param name="entities">The entity types whose tables to reconcile.</param>
+            <param name="createBackup">Whether to back up schemas before altering existing tables.</param>
+            <param name="connectionId">The connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.SetSyncMode(CL.MySQL2.Models.SyncMode,System.String)">
+            <summary>
+            Overrides the configured <see cref="T:CL.MySQL2.Models.SyncMode"/> for a connection at runtime, without editing
+            the config file or restarting. Useful to flip <see cref="F:CL.MySQL2.Models.SyncMode.Migration"/> back to
+            <see cref="F:CL.MySQL2.Models.SyncMode.Production"/> once a one-shot migration pass has completed.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.RegisterMigration(CL.MySQL2.Models.IMigration)">
+            <summary>Registers a single <see cref="T:CL.MySQL2.Models.IMigration"/> with the runner.</summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.RegisterMigrationsFrom(System.Reflection.Assembly)">
+            <summary>Registers every concrete <see cref="T:CL.MySQL2.Models.IMigration"/> in the given assembly.</summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.MigrateAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Applies all pending imperative migrations (caller-driven; not auto-run on start). See
+            <see cref="M:CL.MySQL2.Services.MigrationRunner.MigrateAsync(System.String,System.Threading.CancellationToken)"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.GetPendingMigrationsAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Returns the pending migration plan without applying anything.</summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.RollbackAsync(CL.MySQL2.Models.MigrationVersion,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Rolls back applied migrations newer than <paramref name="target"/>, newest-first. See
+            <see cref="M:CL.MySQL2.Services.MigrationRunner.RollbackAsync(CL.MySQL2.Models.MigrationVersion,System.String,System.Threading.CancellationToken)"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.RestoreSchemaAsync(System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Restores a table's schema from a <see cref="P:CL.MySQL2.MySQL2Library.BackupManager"/> snapshot (drops and recreates
+            the table from captured DDL) and clears its <c>__schema_state</c> row so the next sync pass
+            reconciles it from scratch. Operator-driven and destructive — only DDL was backed up, so the
+            table's rows are lost. When <paramref name="backupFile"/> is null the latest backup is used.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.RegisterCachePool(System.String,System.TimeSpan,System.Int32,System.Func{System.Threading.Tasks.Task})">
+            <summary>
+            Registers a named <see cref="T:CL.MySQL2.Services.SmartCachePool"/>. Queries opt into the
+            pool via <c>.SmartCache(name)</c>; the pool's background timer keeps
+            every registered query's cache entry warm.
+            <para>
+            Idempotent — calling twice with the same name returns the existing
+            pool unchanged (refresh interval is NOT updated on re-register).
+            </para>
+            </summary>
+            <param name="name">Pool name (case-insensitive) referenced by <c>.SmartCache</c>.</param>
+            <param name="refreshEvery">How often the pool re-runs every registered query.</param>
+            <param name="maxIdleFires">
+            Drop a registered entry after this many consecutive refresh ticks with
+            no read. Default 3 — at a 30-second refresh interval, an unread entry
+            is dropped after ~90 seconds, bounding cardinality on parameterized queries.
+            </param>
+            <param name="warmUp">
+            Optional warm-up callback. When supplied, the pool runs it once as a
+            fire-and-forget task right after registration so the cache is hot
+            before the first user request hits it. Inside the callback, just call
+            the queries that should be warm (with their normal
+            <c>.SmartCache(name)</c> decoration) — they auto-register with the
+            pool as usual. Exceptions are caught and logged; the pool stays
+            lazy if warm-up fails.
+            </param>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.RefreshCachePoolAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Triggers an out-of-schedule refresh for the named pool.</summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.GetCachePoolStats">
+            <summary>Diagnostic snapshot of every registered smart-cache pool.</summary>
+        </member>
+        <member name="M:CL.MySQL2.MySQL2Library.GetCacheStats">
+            <summary>
+            Diagnostic snapshot of the underlying <see cref="T:CL.MySQL2.Services.QueryCache"/>:
+            total entries, per-table breakdown, table-version counters. Use
+            from the admin UI to spot orphan accumulation or a hot table.
             </summary>
         </member>
         <member name="M:CL.MySQL2.MySQL2Library.TestConnectionAsync(System.String,System.Threading.CancellationToken)">
@@ -580,6 +1461,23 @@
             </summary>
             <param name="olderThanDays">Files older than this many days will be deleted.</param>
             <returns>The number of files deleted.</returns>
+        </member>
+        <member name="M:CL.MySQL2.Services.BackupManager.GetLatestBackupFile(System.String)">
+            <summary>
+            Returns the most recent schema backup file for a table, or null if none exists. Backups are
+            named <c>{table}_{yyyyMMdd_HHmmss}.sql</c> in the backup directory.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.BackupManager.RestoreTableSchemaAsync(System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Restores a table's schema by replaying a backup .sql file: drops the table, then re-runs the
+            captured CREATE TABLE. Destructive and operator-driven — the table's data is lost (only the
+            DDL was ever backed up). When <paramref name="backupFile"/> is null the latest backup is used.
+            </summary>
+            <param name="tableName">The table to restore.</param>
+            <param name="backupFile">Path to the backup file, or null to use the latest.</param>
+            <param name="connectionId">The connection ID to use.</param>
+            <param name="ct">Cancellation token.</param>
         </member>
         <member name="T:CL.MySQL2.Services.ConnectionManager">
             <summary>
@@ -630,6 +1528,9 @@
             Opens a connection, executes the given action, closes the connection, and returns the result.
             </summary>
         </member>
+        <member name="M:CL.MySQL2.Services.ConnectionManager.IsTransient(MySqlConnector.MySqlException)">
+            <summary>MySQL transient errors that are safe to retry: 1213 deadlock, 1205 lock-wait timeout.</summary>
+        </member>
         <member name="M:CL.MySQL2.Services.ConnectionManager.ExecuteWithTransactionAsync``1(System.Func{MySqlConnector.MySqlConnection,MySqlConnector.MySqlTransaction,System.Threading.Tasks.Task{``0}},System.String,System.Threading.CancellationToken)">
             <summary>
             Opens a connection, begins a transaction, executes the action, commits, and returns the result.
@@ -653,6 +1554,255 @@
         </member>
         <member name="M:CL.MySQL2.Services.ServerInfo.#ctor(System.String,System.String,System.String,System.String)">
             <summary>Basic MySQL server metadata.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.GroupedQuery`2">
+            <summary>
+            Intermediate query produced by <see cref="M:CL.MySQL2.Services.QueryBuilder`1.GroupBy``1(System.Linq.Expressions.Expression{System.Func{`0,``0}})"/>. Not
+            directly executable — the only exit is <see cref="M:CL.MySQL2.Services.GroupedQuery`2.Select``1(System.Linq.Expressions.Expression{System.Func{System.Linq.IGrouping{`0,`1},``0}})"/> which collapses
+            the groups back into a shaped result set. Calls inside the projection lambda
+            (<c>g.Sum</c>, <c>g.Average</c>, <c>g.Count</c>, <c>g.Key</c>, …) translate to SQL
+            aggregates against the current <c>GROUP BY</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.GroupedQuery`2.Select``1(System.Linq.Expressions.Expression{System.Func{System.Linq.IGrouping{`0,`1},``0}})">
+            <summary>
+            Collapse groups into a shaped result. Inside <paramref name="projection"/>, use
+            <c>g.Key</c> to reference the grouping key and <c>g.Sum/Average/Min/Max/Count/Any</c>
+            to aggregate rows. Everything translates to SQL — rows aren't materialized into
+            <typeparamref name="TSource"/> first.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.GroupedQuery`2.BuildGroupBy">
+            <summary>
+            Build the GROUP BY list from the key selector. For composite anonymous-type keys
+            (<c>x =&gt; new { x.A, x.B }</c>) each member becomes a separate group expression.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.ICacheCoordinator">
+            <summary>
+            Cross-node coordination for the query cache. The default
+            (<see cref="T:CL.MySQL2.Services.NullCacheCoordinator"/>) is single-node and does nothing; a distributed
+            adapter (Redis pub/sub, NATS, etc.) is supplied by the consumer via
+            <see cref="M:CL.MySQL2.Services.QueryCache.UseCoordinator(CL.MySQL2.Services.ICacheCoordinator)"/> — exactly the same plug-in model as
+            <see cref="T:CL.MySQL2.Services.ICacheStore"/>. The library ships no transport dependency of its own.
+            <para>
+            Two responsibilities:
+            <list type="number">
+              <item><b>Invalidation fan-out</b> — <see cref="M:CL.MySQL2.Services.ICacheCoordinator.PublishInvalidationAsync(System.String,System.Threading.CancellationToken)"/> broadcasts
+                a local table mutation so peers drop their cached entries. Without this, each
+                process keeps its own per-table version counter and a mutation on one node never
+                invalidates the others.</item>
+              <item><b>Single-flight refresh</b> — <see cref="M:CL.MySQL2.Services.ICacheCoordinator.TryAcquireRefreshLeaseAsync(System.String,System.TimeSpan,System.Threading.CancellationToken)"/> lets
+                exactly one node own a <see cref="T:CL.MySQL2.Services.SmartCachePool"/>'s refresh each tick, so N nodes
+                don't all hit the database. This assumes a <i>shared</i> <see cref="T:CL.MySQL2.Services.ICacheStore"/>
+                (e.g. Redis): the lease holder refreshes and writes; the others read the shared
+                entry.</item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheCoordinator.PublishInvalidationAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Broadcasts that <paramref name="tableName"/> was mutated on this node so peers can
+            invalidate their cached entries for it. Fire-and-forget from the caller's
+            perspective; implementations should not throw on transient transport failures.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheCoordinator.OnInvalidation(System.Action{System.String})">
+            <summary>
+            Registers a handler invoked when a <i>peer</i> broadcasts an invalidation. The
+            handler bumps the local table version and evicts matching entries (it must NOT
+            re-broadcast — that would loop). Called once when the coordinator is installed.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheCoordinator.TryAcquireRefreshLeaseAsync(System.String,System.TimeSpan,System.Threading.CancellationToken)">
+            <summary>
+            Attempts to acquire the refresh lease for <paramref name="poolName"/> for the next
+            <paramref name="lease"/> window. Returns <c>true</c> if this node should perform the
+            refresh, <c>false</c> if a peer already holds it. The single-node default always
+            returns <c>true</c>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.NullCacheCoordinator">
+            <summary>
+            Single-node default: no fan-out, and every node (there is only one) always wins the
+            refresh lease — so behaviour is identical to the pre-coordination library.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Services.NullCacheCoordinator.Instance">
+            <summary>Shared instance — stateless.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.ICacheStore">
+            <summary>
+            Abstraction over the cache backend. The default implementation is in-process
+            (<see cref="T:CL.MySQL2.Services.InProcessCacheStore"/>). Distributed adapters (Redis, memcached) can
+            implement this without touching callers.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheStore.TryGetAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Attempts to read a cached value. Returns false if missing or expired.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheStore.SetAsync(System.String,System.Object,System.TimeSpan,System.String,System.Threading.CancellationToken)">
+            <summary>Stores a value with a TTL.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheStore.EvictAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Evicts a single key.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheStore.EvictByTableAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Evicts every entry whose tableName matches. Used by
+            <see cref="M:CL.MySQL2.Services.QueryCache.Invalidate(System.String)"/> so orphan entries (e.g.
+            older table-version snapshots) don't accumulate after a mutation.
+            Default implementation is a no-op for adapters that can't enumerate;
+            the in-process store overrides this with an O(n) scan that's still
+            cheap relative to the savings.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.ICacheStore.Count">
+            <summary>Total entries currently in the cache (best-effort).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheStore.CountByTable">
+            <summary>
+            Diagnostic snapshot — entry count grouped by tableName. Used by the
+            admin UI to surface "what's actually in the cache" without dumping
+            values. Default implementation returns an empty dict for adapters
+            that can't enumerate.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ICacheStore.Clear">
+            <summary>Wipes everything (tests, admin operations).</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.IMigrationContext">
+            <summary>
+            The surface available to an <see cref="T:CL.MySQL2.Models.IMigration"/> while it runs. Everything here
+            executes on the migration's own connection and transaction (DDL excepted — MySQL auto-commits
+            it). Provides raw SQL helpers plus a bridge into the declarative schema sync so a migration can
+            bring a table to its current model shape and then transform data in the same step.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.IMigrationContext.Connection">
+            <summary>The migration's open connection.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.IMigrationContext.Transaction">
+            <summary>The migration's open transaction.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.IMigrationContext.ExecuteAsync(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>Runs a non-query statement (INSERT/UPDATE/DELETE/DDL) and returns affected rows.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.IMigrationContext.QueryAsync``1(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>Runs a query and materializes each row into <typeparamref name="T"/>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.IMigrationContext.ScalarAsync``1(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>Runs a query returning a single scalar (first column of the first row).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.IMigrationContext.SyncTableAsync``1(System.Threading.CancellationToken)">
+            <summary>
+            Brings the table for <typeparamref name="T"/> to its current model shape via the schema
+            analyzer (CREATE if missing, otherwise additive ALTERs). Lets a migration add only the data
+            transform around it. Note: this issues DDL, which MySQL commits immediately.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.MigrationContext">
+            <summary>
+            Default <see cref="T:CL.MySQL2.Services.IMigrationContext"/> backed by a <see cref="T:CL.MySQL2.Services.TransactionScope"/> and a
+            <see cref="T:CL.MySQL2.Core.SchemaAnalyzer"/>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.InProcessCacheStore">
+            <summary>
+            Default <see cref="T:CL.MySQL2.Services.ICacheStore"/>: a thread-safe, process-local dictionary with
+            TTL-based expiry and a soft cap on total entries. Eviction is lazy: expired entries
+            are purged during <c>Set</c> once the cap is exceeded, and the oldest 25% go with them.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.JoinedQuery`3">
+            <summary>
+            A typed two-table join. Built by <see cref="M:CL.MySQL2.Services.QueryBuilder`1.Join``3(System.Linq.Expressions.Expression{System.Func{`0,``1}},System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Linq.Expressions.Expression{System.Func{`0,``0,``2}},CL.MySQL2.Models.JoinType)"/>;
+            the left side is aliased <c>t0</c> and the right side <c>t1</c>. The result selector
+            projects matched rows into <typeparamref name="TResult"/> — only the referenced columns
+            are transferred, materialized by a compiled (reflection-free) row mapper.
+            <para>
+            Supports <see cref="M:CL.MySQL2.Services.JoinedQuery`3.Where(System.Linq.Expressions.Expression{System.Func{`0,`1,System.Boolean}})"/>, <see cref="M:CL.MySQL2.Services.JoinedQuery`3.OrderBy``1(System.Linq.Expressions.Expression{System.Func{`0,`1,``0}})"/> / <see cref="M:CL.MySQL2.Services.JoinedQuery`3.OrderByDescending``1(System.Linq.Expressions.Expression{System.Func{`0,`1,``0}})"/>,
+            <see cref="M:CL.MySQL2.Services.JoinedQuery`3.Take(System.Int32)"/> / <see cref="M:CL.MySQL2.Services.JoinedQuery`3.Skip(System.Int32)"/>, and the <c>ToListAsync</c> / <c>FirstOrDefaultAsync</c> /
+            <c>CountAsync</c> terminals.
+            </para>
+            <para>
+            <b>Not cacheable in this version.</b> The result cache stamps entries with a single
+            table's version counter, so a join entry could not be invalidated when the <i>other</i>
+            joined table mutates. Rather than ship a cache that silently serves stale joins,
+            <c>.WithCache</c> / <c>.SmartCache</c> are intentionally absent here. Multi-table
+            invalidation is on the roadmap.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.JoinedQuery`3.Where(System.Linq.Expressions.Expression{System.Func{`0,`1,System.Boolean}})">
+            <summary>
+            Filters matched rows. The predicate may reference either side, e.g.
+            <c>(o, c) =&gt; o.Total &gt; 100 &amp;&amp; c.Country == "DK"</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.JoinedQuery`3.OrderBy``1(System.Linq.Expressions.Expression{System.Func{`0,`1,``0}})">
+            <summary>Orders ascending by a column from either side: <c>(o, c) =&gt; o.CreatedUtc</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.JoinedQuery`3.OrderByDescending``1(System.Linq.Expressions.Expression{System.Func{`0,`1,``0}})">
+            <summary>Orders descending by a column from either side.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.JoinedQuery`3.AddLeftPredicate(System.Linq.Expressions.LambdaExpression)">
+            <summary>
+            Adds a left-side-only predicate carried over from the originating
+            <c>QueryBuilder&lt;TLeft&gt;.Where(...)</c> calls made before <c>.Join</c>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.MigrationRunner">
+            <summary>
+            Discovers, orders, and runs <see cref="T:CL.MySQL2.Models.IMigration"/> instances on top of the
+            <see cref="T:CL.MySQL2.Services.MigrationTracker"/>'s <c>__migrations</c> history. Migrations are applied in
+            <see cref="T:CL.MySQL2.Models.MigrationVersion"/> order, each in its own transaction, gated by the app version and
+            serialized across nodes by the shared <see cref="T:CL.MySQL2.Services.SchemaSyncLock"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunner.Register(CL.MySQL2.Models.IMigration)">
+            <summary>Registers a migration instance for discovery.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunner.RegisterFrom(System.Reflection.Assembly)">
+            <summary>
+            Registers every concrete <see cref="T:CL.MySQL2.Models.IMigration"/> with a public parameterless constructor
+            found in <paramref name="assembly"/>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunner.MigrationId(CL.MySQL2.Models.IMigration)">
+            <summary>Stable migration ID stored in <c>__migrations.MigrationId</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunner.GetPendingAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns the migrations that are pending (registered, at or below the current app version,
+            and not yet applied) in apply order — without applying anything.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunner.MigrateAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Applies all pending migrations in order, each in its own transaction, under the shared
+            schema-sync lock. Also warns when a previously-applied migration's checksum has drifted.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunner.RollbackAsync(CL.MySQL2.Models.MigrationVersion,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Rolls back every applied migration whose version is strictly greater than
+            <paramref name="target"/>, newest-first, each in its own transaction. Aborts before making
+            any change if a migration in range does not support <c>DownAsync</c>.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.MigrationPlanItem">
+            <summary>A pending migration in the plan returned by <see cref="M:CL.MySQL2.Services.MigrationRunner.GetPendingAsync(System.String,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationPlanItem.#ctor(System.String,CL.MySQL2.Models.MigrationVersion,System.String)">
+            <summary>A pending migration in the plan returned by <see cref="M:CL.MySQL2.Services.MigrationRunner.GetPendingAsync(System.String,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.MigrationRunResult">
+            <summary>Outcome of a migrate or rollback pass.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.MigrationRunResult.#ctor(System.Collections.Generic.IReadOnlyList{System.String},System.Int32)">
+            <summary>Outcome of a migrate or rollback pass.</summary>
         </member>
         <member name="T:CL.MySQL2.Services.MigrationTracker">
             <summary>
@@ -711,6 +1861,26 @@
             Represents a single applied migration record from the tracking table.
             </summary>
         </member>
+        <member name="T:CL.MySQL2.Services.ProjectedQuery`2">
+            <summary>
+            A query pipeline whose output rows are <typeparamref name="TResult"/>, produced by
+            projecting from an underlying entity type <typeparamref name="TSource"/>.
+            Built by <c>QueryBuilder&lt;T&gt;.Select&lt;TResult&gt;</c> (and, once task #4 lands, by
+            <c>GroupedQuery&lt;TKey, TSource&gt;.Select&lt;TResult&gt;</c>).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ProjectedQuery`2.WithCache(System.TimeSpan)">
+            <summary>
+            Enable result caching for this projected query. TTL and time-quantize behaviour come
+            from <see cref="T:CL.MySQL2.Configuration.CacheConfiguration"/> globally; per-call TTL wins here.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.ProjectedQuery`2.SmartCache(System.String)">
+            <summary>
+            Opt this projected query into a named <see cref="T:CL.MySQL2.Services.SmartCachePool"/>.
+            See <c>QueryBuilder.SmartCache</c> for details.
+            </summary>
+        </member>
         <member name="T:CL.MySQL2.Services.QueryBuilder`1">
             <summary>
             Fluent query builder for entity type <typeparamref name="T"/>.
@@ -718,27 +1888,401 @@
             terminal operations returning <see cref="T:CodeLogic.Core.Results.Result`1"/>.
             </summary>
         </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.WhereExists``1(System.Linq.Expressions.Expression{System.Func{`0,``0,System.Boolean}})">
+            <summary>
+            Adds a correlated <c>EXISTS</c> filter. The predicate may reference both the outer
+            row and a row of <typeparamref name="TInner"/>; any non-correlated condition on the
+            inner side belongs in the same predicate. Translates to
+            <c>EXISTS (SELECT 1 FROM `inner` WHERE …)</c>.
+            <para>Example:
+            <code>
+            mysql.Query&lt;Order&gt;()
+              .WhereExists&lt;Shipment&gt;((o, s) =&gt; s.OrderId == o.Id &amp;&amp; s.Status == "sent")
+            </code></para>
+            <para><b>Not supported:</b> EXISTS against the same table as the outer query
+            (unqualified inner columns would be ambiguous). A query carrying a subquery filter
+            is not cacheable and cannot be turned into a typed <c>.Join</c>.</para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.WhereNotExists``1(System.Linq.Expressions.Expression{System.Func{`0,``0,System.Boolean}})">
+            <summary>Correlated <c>NOT EXISTS</c> filter. See <see cref="M:CL.MySQL2.Services.QueryBuilder`1.WhereExists``1(System.Linq.Expressions.Expression{System.Func{`0,``0,System.Boolean}})"/>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.WhereIn``2(System.Linq.Expressions.Expression{System.Func{`0,``1}},System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Linq.Expressions.Expression{System.Func{``0,System.Boolean}})">
+            <summary>
+            Adds an <c>IN (subquery)</c> filter: <c>outerColumn IN (SELECT innerColumn FROM
+            `inner` [WHERE innerFilter])</c>. The inner filter is uncorrelated (it sees only
+            <typeparamref name="TInner"/>).
+            <para>Example:
+            <code>
+            mysql.Query&lt;Order&gt;()
+              .WhereIn&lt;Customer, long&gt;(o =&gt; o.CustomerId, c =&gt; c.Id, c =&gt; c.IsVip)
+            </code></para>
+            <para>A query carrying a subquery filter is not cacheable and cannot be turned into
+            a typed <c>.Join</c>.</para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.WhereNotIn``2(System.Linq.Expressions.Expression{System.Func{`0,``1}},System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Linq.Expressions.Expression{System.Func{``0,System.Boolean}})">
+            <summary>Adds a <c>NOT IN (subquery)</c> filter. See <see cref="M:CL.MySQL2.Services.QueryBuilder`1.WhereIn``2(System.Linq.Expressions.Expression{System.Func{`0,``1}},System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Linq.Expressions.Expression{System.Func{``0,System.Boolean}})"/>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.AppendSubqueryWhere(System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Re-keys a subquery fragment's parameters into the outer query's namespace
+            (<c>@sub_N</c>) and appends it as a WHERE term. Longer parameter names are replaced
+            first so <c>@p1</c> can't clobber a substring of <c>@p10</c>.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.After(System.String)">
+            <summary>
+            Continues a cursor-paged query after <paramref name="cursor"/>. The cursor must have
+            been returned by <see cref="M:CL.MySQL2.Services.QueryBuilder`1.ToCursorPagedListAsync(System.Int32,System.Threading.CancellationToken)"/> for the same entity and ordering.
+            A null cursor selects the first page.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.Join``3(System.Linq.Expressions.Expression{System.Func{`0,``1}},System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Linq.Expressions.Expression{System.Func{`0,``0,``2}},CL.MySQL2.Models.JoinType)">
+            <summary>
+            Strongly-typed equi-join to <typeparamref name="TRight"/>, translated to real SQL with
+            table aliases (left <c>t0</c>, right <c>t1</c>) and a compiled projection into
+            <typeparamref name="TResult"/> — only the referenced columns are transferred.
+            <para>
+            Example:
+            <code>
+            await mysql.Query&lt;Order&gt;()
+                .Where(o =&gt; o.Total &gt; 100)
+                .Join&lt;Customer, long, OrderView&gt;(
+                    o =&gt; o.CustomerId,             // left key
+                    c =&gt; c.Id,                     // right key
+                    (o, c) =&gt; new OrderView { OrderId = o.Id, Customer = c.Name })
+                .OrderByDescending((o, c) =&gt; o.Total)
+                .ToListAsync();
+            </code>
+            </para>
+            <para>
+            Keys may be single members or composite anonymous keys
+            (<c>o =&gt; new { o.A, o.B }</c> matched with <c>c =&gt; new { c.X, c.Y }</c>).
+            <c>.Where(...)</c> calls made before <c>.Join</c> are carried over and re-qualified
+            to the left table. Apply ordering and paging <i>after</i> the join via the returned
+            <see cref="T:CL.MySQL2.Services.JoinedQuery`3"/>.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.Select``1(System.Linq.Expressions.Expression{System.Func{`0,``0}})">
+            <summary>
+            Typed projection: transforms rows of <typeparamref name="T"/> into rows of
+            <typeparamref name="TResult"/>. Emits a real <c>SELECT col1, col2 AS alias</c>
+            column list and returns a pipeline whose terminals hydrate
+            <typeparamref name="TResult"/> directly — skipping <typeparamref name="T"/>
+            materialization and any columns not referenced by the projection.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.GroupBy``1(System.Linq.Expressions.Expression{System.Func{`0,``0}})">
+            <summary>
+            Groups rows by the key selector and returns a <see cref="T:CL.MySQL2.Services.GroupedQuery`2"/>.
+            Collapse the groups with <c>.Select(g =&gt; new { … g.Sum(...) … })</c>; nothing is
+            executed until a terminal on the projected query.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.IncludeDeleted">
+            <summary>
+            Includes soft-deleted rows in the results. Only meaningful when the entity carries
+            <see cref="T:CL.MySQL2.Models.SoftDeleteAttribute"/>; otherwise a no-op. Reads exclude soft-deleted
+            rows by default.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.WithCache(System.TimeSpan)">
+            <summary>
+            Enable result caching for this query. Cached results are automatically invalidated
+            when any mutation (INSERT/UPDATE/DELETE) occurs on the same table.
+            Has no effect inside a transaction scope (reads in transactions see uncommitted writes).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.SmartCache(System.String)">
+            <summary>
+            Opt this query into a named <see cref="T:CL.MySQL2.Services.SmartCachePool"/>. The pool's
+            background timer keeps the cache entry warm — readers never block on
+            the DB once the entry is populated. The pool must be registered via
+            <c>MySQL2Library.RegisterCachePool</c> beforehand; an unknown name
+            falls back to non-cached execution (logged at warn).
+            <para>
+            Mutually exclusive with <see cref="M:CL.MySQL2.Services.QueryBuilder`1.WithCache(System.TimeSpan)"/> — if both
+            are set, <c>SmartCache</c> wins and the TTL is derived from the
+            pool's refresh interval.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.DescribeQueryForLog">
+            <summary>
+            Best-effort query description for error logs — the SELECT shape (table +
+            WHERE) pinpoints the failing call site even for update/delete variants.
+            Never throws.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.ToCursorPagedListAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Executes a forward-only keyset page. At least one explicit ordering is required;
+            the mapped primary key is appended automatically when it is not already present.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryBuilder`1.UpdateAsync(System.Linq.Expressions.Expression{System.Func{`0,`0}},System.Threading.CancellationToken)">
+            <summary>
+            Bulk-update matching rows with a typed setter expression. Emits a single
+            <c>UPDATE … SET … WHERE …</c> statement; no rows are fetched client-side.
+            <para>
+            Example:
+            <code>
+            await mysql.Query&lt;Ticket&gt;()
+                .Where(t =&gt; t.Status == "open" &amp;&amp; t.CreatedUtc &lt; cutoff)
+                .UpdateAsync(t =&gt; new Ticket { Status = "stale", ReviewedUtc = now });
+            </code>
+            </para>
+            Each <c>new T { Prop = value }</c> binding maps to one <c>SET col = value</c>.
+            Values may reference captured variables (parameterized) or other columns of the
+            same row (<c>new T { Counter = t.Counter + 1 }</c>).
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.QueryCache">
+            <summary>
+            Facade over <see cref="T:CL.MySQL2.Services.ICacheStore"/> providing query-result caching with two key
+            properties:
+            <list type="bullet">
+              <item><b>Time-quantized keys</b> — DateTime parameters derived from <c>UtcNow</c>
+                are rounded to a configurable window before hashing, so
+                <c>.Where(x =&gt; x.At &gt;= UtcNow.AddDays(-30))</c> no longer produces a unique key per call.</item>
+              <item><b>Table-version invalidation</b> — mutations bump a per-table version counter
+                that participates in the cache key; prior entries simply become un-hittable and
+                are swept on eviction. No need to track-and-evict individual keys.</item>
+            </list>
+            Keeps a static facade so existing callers (<c>QueryBuilder</c>, <c>Repository</c>)
+            compile unchanged.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Services.QueryCache.QuantizeRelevance">
+            <summary>How far from <c>UtcNow</c> a DateTime parameter must be to qualify for
+            quantization. 30 days covers typical "last N days" windows without catching
+            far-future / far-past absolute dates.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCache.TimeQuantizeSeconds">
+            <summary>Current quantization window. 0 = off.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCache.Enabled">
+            <summary>Whether the cache is enabled globally.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.UseStore(CL.MySQL2.Services.ICacheStore)">
+            <summary>Replace the underlying store (e.g. with a Redis adapter).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.UseCoordinator(CL.MySQL2.Services.ICacheCoordinator)">
+            <summary>
+            Installs a multi-node <see cref="T:CL.MySQL2.Services.ICacheCoordinator"/> (e.g. a Redis pub/sub adapter)
+            so mutations fan out to peers and smart-cache pools refresh single-flight. Wires the
+            coordinator's peer-invalidation callback to the local (non-broadcasting) invalidation
+            path. Pair with a shared <see cref="T:CL.MySQL2.Services.ICacheStore"/> via <see cref="M:CL.MySQL2.Services.QueryCache.UseStore(CL.MySQL2.Services.ICacheStore)"/>.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCache.Coordinator">
+            <summary>The active coordinator. Single-node no-op unless <see cref="M:CL.MySQL2.Services.QueryCache.UseCoordinator(CL.MySQL2.Services.ICacheCoordinator)"/> ran.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.Configure(System.Boolean,System.Int32,System.Int32)">
+            <summary>Apply runtime configuration from <see cref="T:CL.MySQL2.Configuration.CacheConfiguration"/>.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCache.Count">
+            <summary>Total cached entries (best-effort).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.GetOrSetAsync``1(System.String,System.String,System.Func{System.Threading.Tasks.Task{``0}},System.TimeSpan,System.String)">
+            <summary>
+            Cache-aside helper. Returns the cached value if fresh; otherwise runs <paramref name="factory"/>,
+            stores the result, and returns it.
+            <para>
+            Failure <see cref="T:CodeLogic.Core.Results.Result`1"/> values are NEVER cached and never
+            served as cache hits — a transient DB failure during a cold-warmup cannot poison the
+            cache. If a previously-cached value is detected as a failure (legacy entries from older
+            versions), it's evicted on read so the call falls through to a fresh execution.
+            </para>
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Services.QueryCache._isFailureProps">
+            <summary>
+            Duck-typed check for a <c>Result&lt;T&gt;</c>-shaped object whose
+            <c>IsFailure</c> property is <c>true</c>. Uses cached PropertyInfo per
+            type so the reflection cost is amortised. Returns <c>false</c> for
+            anything that doesn't expose the property (lists, scalars, etc.) —
+            those are cached as before.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.SetDirectAsync(System.String,System.Object,System.TimeSpan,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Direct write into the cache, bypassing the cache-aside flow. Used by
+            <see cref="T:CL.MySQL2.Services.SmartCachePool"/> to overwrite an entry after a background
+            refresh produces a fresh value. No observability event is emitted —
+            the refresh isn't a cache hit or miss from a caller's perspective.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.Invalidate(System.String)">
+            <summary>
+            Invalidate all cached entries for the given table.
+            <para>
+            Two-step: bump the per-table version (so future reads compute a
+            different cache key and miss any in-flight refresh writes), then
+            evict the now-orphaned entries from the underlying store so they
+            don't accumulate. Without the second step, every mutation leaves
+            behind the previous version's entries until TTL/LRU clears them,
+            which on a busy app produces unbounded memory growth.
+            </para>
+            <para>
+            When a table has active <see cref="T:CL.MySQL2.Services.SmartCachePool"/> entries, the
+            pool's background refresh is the source of truth for freshness — it
+            re-executes queries every <c>RefreshEvery</c> and writes to the
+            current version's cache key. Flushing the cache on every mutation
+            (e.g. a stats ingest INSERT) would defeat the pool: every request
+            between the flush and the next refresh tick hits the DB cold. For
+            pool-managed tables we skip the eviction and let the pool refresh
+            deliver naturally-stale-within-interval reads instead.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.InvalidateFromPeer(System.String)">
+            <summary>
+            Applies an invalidation broadcast by a peer node. Same effect as
+            <see cref="M:CL.MySQL2.Services.QueryCache.Invalidate(System.String)"/> but does NOT re-broadcast (that would loop).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.Invalidate``1">
+            <summary>Invalidate for the table behind entity type <typeparamref name="T"/>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.GetStats">
+            <summary>
+            Diagnostic snapshot: total entries + per-table counts + table-version
+            map. Returned types are immutable copies; safe to log or render on an
+            admin page without holding cache locks.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.Clear">
+            <summary>Clear the entire cache (admin / tests).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.EvictAsync(System.String)">
+            <summary>Internal hook for SmartCachePool to evict a single key.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCache.BuildCacheKey(System.String,System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Build a deterministic cache key from a SQL query, its parameters, and the table it
+            reads from. DateTime parameters close to "now" are quantized to the configured
+            window. The table's current version is mixed in so invalidation is free.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.QueryCacheStats">
+            <summary>
+            Diagnostic snapshot of <see cref="T:CL.MySQL2.Services.QueryCache"/> state. Surfaced via
+            <see cref="M:CL.MySQL2.MySQL2Library.GetCacheStats"/> for the admin UI so operators
+            can see what's actually living in cache without dumping values.
+            </summary>
+            <param name="TotalEntries">Total entries in the underlying store, across all tables.</param>
+            <param name="EntriesByTable">Entry count grouped by tableName.</param>
+            <param name="TableVersions">
+            Per-table version counters. Bumped on every mutation; participates in
+            the cache key so old entries become un-hittable on the read path.
+            </param>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryCacheStats.#ctor(System.Int32,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Int32},System.Collections.Generic.IReadOnlyDictionary{System.String,System.Int64})">
+            <summary>
+            Diagnostic snapshot of <see cref="T:CL.MySQL2.Services.QueryCache"/> state. Surfaced via
+            <see cref="M:CL.MySQL2.MySQL2Library.GetCacheStats"/> for the admin UI so operators
+            can see what's actually living in cache without dumping values.
+            </summary>
+            <param name="TotalEntries">Total entries in the underlying store, across all tables.</param>
+            <param name="EntriesByTable">Entry count grouped by tableName.</param>
+            <param name="TableVersions">
+            Per-table version counters. Bumped on every mutation; participates in
+            the cache key so old entries become un-hittable on the read path.
+            </param>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCacheStats.TotalEntries">
+            <summary>Total entries in the underlying store, across all tables.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCacheStats.EntriesByTable">
+            <summary>Entry count grouped by tableName.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.QueryCacheStats.TableVersions">
+            <summary>
+            Per-table version counters. Bumped on every mutation; participates in
+            the cache key so old entries become un-hittable on the read path.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.QueryObservability">
+            <summary>
+            Process-wide sink for query lifecycle notifications. Query pipelines call the
+            lightweight <c>Record*</c> methods without needing an <see cref="T:CodeLogic.Core.Events.IEventBus"/>
+            instance passed through. The library wires the sink to CodeLogic's event bus at
+            init time.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryObservability.Configure(CodeLogic.Core.Events.IEventBus,CodeLogic.Core.Logging.ILogger)">
+            <summary>Bind this sink to CodeLogic's event bus. Called by <c>MySQL2Library</c>.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryObservability.RecordExecuted(System.String,System.String,System.Int64,System.Int32,System.Boolean)">
+            <summary>Fire <see cref="T:CL.MySQL2.Events.QueryExecutedEvent"/>; always, regardless of speed.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.QueryObservability.RecordSlow(System.String,System.String,System.Int64,System.String)">
+            <summary>
+            Fire <see cref="T:CL.MySQL2.Events.SlowQueryEvent"/> and log. <paramref name="explainJson"/> is only
+            included when the per-DB <c>CaptureExplainOnSlowQuery</c> flag is on and the
+            caller has fetched the plan.
+            </summary>
+        </member>
         <member name="T:CL.MySQL2.Services.Repository`1">
             <summary>
-            Generic repository providing CRUD and query operations for entity type <typeparamref name="T"/>.
-            Uses reflection with a static per-type cache for performance.
-            </summary>
-        </member>
-        <member name="M:CL.MySQL2.Services.Repository`1.#ctor(CL.MySQL2.Services.ConnectionManager,CodeLogic.Core.Logging.ILogger,System.String,System.Int32)">
-            <summary>
-            Creates a repository using the given connection manager and connection ID.
-            </summary>
-        </member>
-        <member name="M:CL.MySQL2.Services.Repository`1.#ctor(CL.MySQL2.Services.ConnectionManager,CodeLogic.Core.Logging.ILogger,CL.MySQL2.Services.TransactionScope,System.Int32)">
-            <summary>
-            Creates a repository that participates in an existing transaction scope.
+            Generic repository providing CRUD for entity type <typeparamref name="T"/>.
+            Uses compiled materializers via <see cref="T:CL.MySQL2.Core.EntityMetadata`1"/> — no per-row reflection.
             </summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.InsertAsync(`0,System.Threading.CancellationToken)">
-            <summary>Inserts a single entity and returns the inserted entity (with auto-generated ID if applicable).</summary>
+            <summary>Inserts a single entity and returns it (with auto-generated PK populated).</summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.InsertManyAsync(System.Collections.Generic.IEnumerable{`0},System.Threading.CancellationToken)">
-            <summary>Bulk-inserts a collection of entities and returns the count inserted.</summary>
+            <summary>
+            Bulk-inserts a collection of entities using real batched INSERT statements.
+            Batches of up to <c>maxBatchInsertSize</c> (default 500) are sent per round-trip.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.UpsertAsync(`0,System.Threading.CancellationToken)">
+            <summary>
+            Inserts a single entity, or updates all non-auto-PK columns to the entity's values
+            if a UNIQUE/PRIMARY-KEY conflict occurs (set semantics). Issues
+            <c>INSERT ... AS new ON DUPLICATE KEY UPDATE</c> (MySQL 8.0.20+ alias syntax).
+            On a new insert the auto-PK is refreshed from <c>LAST_INSERT_ID()</c>; on a pure
+            update the entity's existing PK value is preserved.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.UpsertManyAsync(System.Collections.Generic.IEnumerable{`0},System.Threading.CancellationToken)">
+            <summary>
+            Bulk-upserts a collection of entities using batched
+            <c>INSERT ... ON DUPLICATE KEY UPDATE</c> statements (set semantics).
+            Batches of up to <c>maxBatchInsertSize</c> (default 500) are sent per round-trip.
+            Returns the total rows-affected count (MySQL counts 1 for each insert and 2 for each
+            update, so this is not equal to <c>entities.Count</c>).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.UpsertWithIncrementsAsync(`0,System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{System.String},System.Threading.CancellationToken)">
+            <summary>
+            Inserts <paramref name="insertSeed"/> if no UNIQUE/PRIMARY-KEY conflict occurs;
+            otherwise applies increment / set semantics to the listed properties on conflict.
+            Properties NOT listed in either array are insert-only — present in the
+            <c>VALUES</c> clause but absent from <c>ON DUPLICATE KEY UPDATE</c> (so they don't
+            change on conflict — useful for <c>created_utc</c> style columns). Property names
+            resolve through <see cref="T:CL.MySQL2.Core.EntityMetadata`1"/> so callers can use
+            <c>nameof(...)</c> for compile-time-safe column references.
+            </summary>
+            <param name="insertSeed">Row to INSERT if no conflict. All non-auto-PK columns
+            go into the <c>VALUES</c> clause.</param>
+            <param name="incrementProperties">C# property names whose columns should
+            <c>col = col + new.col</c> on conflict.</param>
+            <param name="setProperties">C# property names whose columns should <c>col = new.col</c>
+            on conflict. Defaults to empty.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>Rows affected (MySQL: 1 = insert, 2 = update with changes, 0 = update with
+            no change).</returns>
+            <exception cref="T:System.ArgumentException">
+            A name in <paramref name="incrementProperties"/> or <paramref name="setProperties"/>
+            does not resolve to a property on <typeparamref name="T"/>, refers to an
+            auto-increment PK, or appears in both arrays.
+            </exception>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.GetByIdAsync(System.Object,System.Threading.CancellationToken)">
             <summary>Retrieves an entity by its primary key value.</summary>
@@ -756,19 +2300,247 @@
             <summary>Returns the total row count for the table.</summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.UpdateAsync(`0,System.Threading.CancellationToken)">
-            <summary>Updates an existing entity and returns the updated entity.</summary>
+            <summary>Updates an existing entity by PK.</summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.DeleteAsync(System.Object,System.Threading.CancellationToken)">
-            <summary>Deletes an entity by its primary key value.</summary>
+            <summary>
+            Deletes an entity by its primary key. For a <see cref="T:CL.MySQL2.Models.SoftDeleteAttribute"/>
+            entity this is a <b>soft delete</b> — it sets the timestamp column to UtcNow instead of
+            removing the row (no-op if already deleted). Use <see cref="M:CL.MySQL2.Services.Repository`1.HardDeleteAsync(System.Object,System.Threading.CancellationToken)"/> to remove
+            the row physically. Returns true when a row was affected.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.HardDeleteAsync(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Physically removes the row by primary key, even for soft-delete entities.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.Repository`1.AdjustAsync``1(System.Object,System.Linq.Expressions.Expression{System.Func{`0,``0}},``0,System.Threading.CancellationToken)">
+            <summary>
+            Atomically adjusts a numeric column by <paramref name="delta"/>. Negative for decrement.
+            </summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.IncrementAsync``1(System.Object,System.Linq.Expressions.Expression{System.Func{`0,``0}},``0,System.Threading.CancellationToken)">
-            <summary>Atomically increments a numeric property by the given amount.</summary>
+            <summary>Increment a numeric column by <paramref name="amount"/>.</summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.DecrementAsync``1(System.Object,System.Linq.Expressions.Expression{System.Func{`0,``0}},``0,System.Threading.CancellationToken)">
-            <summary>Atomically decrements a numeric property by the given amount.</summary>
+            <summary>Decrement a numeric column by <paramref name="amount"/>.</summary>
         </member>
         <member name="M:CL.MySQL2.Services.Repository`1.FindAsync(System.Linq.Expressions.Expression{System.Func{`0,System.Boolean}},System.Threading.CancellationToken)">
             <summary>Returns all entities matching the given LINQ predicate.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.RetentionWorker">
+            <summary>
+            Background worker that purges old rows from entities marked with
+            <see cref="T:CL.MySQL2.Models.RetainDaysAttribute"/>. Runs once per 24 hours; on first start it runs
+            after a short delay so library startup isn't blocked by a potentially long delete.
+            <para>
+            Each purge pass runs <c>DELETE FROM {table} WHERE {col} &lt; NOW() - INTERVAL N DAY LIMIT batchSize</c>
+            repeatedly until a pass deletes zero rows. That keeps individual transactions small
+            (friendly to InnoDB's undo log) while still converging on empty.
+            </para>
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.RetentionWorker.HasWork">
+            <summary>Whether any registered entity has a retention policy to run.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SchemaSyncStatus">
+            <summary>
+            Reconciliation status recorded per table in <c>__schema_state</c>.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Services.SchemaSyncStatus.Synced">
+            <summary>The live table fully matches the model — no outstanding work.</summary>
+        </member>
+        <member name="F:CL.MySQL2.Services.SchemaSyncStatus.DriftPending">
+            <summary>
+            Additive (Production) sync was applied but a destructive change (column/index/FK drop)
+            was required and deferred. A <see cref="F:CL.MySQL2.Models.SyncMode.Migration"/> pass will complete it.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SchemaStateStore">
+            <summary>
+            Owns the <c>__schema_state</c> sentinel table: one row per model holding a CRC of the model's
+            desired schema plus reconciliation status and audit metadata. The CRC lets schema sync skip a
+            table entirely (no <c>information_schema</c> diffing) when nothing has changed.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaStateStore.EnsureStateTableAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Ensures the <c>__schema_state</c> table exists. Call once during library initialization.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaStateStore.GetStateAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Returns the recorded state for a table, or null if none.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaStateStore.UpsertStateAsync(System.String,System.String,CL.MySQL2.Services.SchemaSyncStatus,System.String,System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Inserts or updates the state row for a table.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaStateStore.RemoveStateAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Removes the state row for a table (e.g. after a manual restore).</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaStateStore.GetAllAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Returns all recorded state rows, ordered by table name.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SchemaStateRecord">
+            <summary>A single row from the <c>__schema_state</c> sentinel table.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaStateRecord.#ctor(System.String,System.String,CL.MySQL2.Services.SchemaSyncStatus,System.String,System.String,System.DateTime,System.String)">
+            <summary>A single row from the <c>__schema_state</c> sentinel table.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SchemaSyncLock">
+            <summary>
+            A cross-node advisory lock around a schema-sync / migration pass, implemented with MySQL's
+            connection-scoped <c>GET_LOCK</c>. Because the lock is released automatically when the holding
+            connection closes, this type keeps a single dedicated connection open for its whole lifetime and
+            releases the lock (and the connection) on <see cref="M:CL.MySQL2.Services.SchemaSyncLock.DisposeAsync"/>.
+            </summary>
+            <remarks>
+            Multiple application nodes booting at once all contend for the same named lock; the winner runs
+            the DDL pass while the others wait, then find the schema already reconciled (matching CRCs) and
+            do nothing. Acquire via <see cref="M:CL.MySQL2.Services.SchemaSyncLock.AcquireAsync(CL.MySQL2.Services.ConnectionManager,System.String,System.Int32,System.String,CodeLogic.Core.Logging.ILogger,System.Threading.CancellationToken)"/>; always check <see cref="P:CL.MySQL2.Services.SchemaSyncLock.Acquired"/>.
+            </remarks>
+        </member>
+        <member name="F:CL.MySQL2.Services.SchemaSyncLock.LockName">
+            <summary>The well-known lock name. Shared by declarative sync and the migration runner.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.SchemaSyncLock.Acquired">
+            <summary>True when the advisory lock was actually obtained within the timeout.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaSyncLock.AcquireAsync(CL.MySQL2.Services.ConnectionManager,System.String,System.Int32,System.String,CodeLogic.Core.Logging.ILogger,System.Threading.CancellationToken)">
+            <summary>
+            Opens a dedicated connection and attempts <c>GET_LOCK(name, timeout)</c>. The returned
+            instance must be disposed to release the lock — even when <see cref="P:CL.MySQL2.Services.SchemaSyncLock.Acquired"/> is false
+            (the connection still needs closing).
+            </summary>
+            <param name="connectionManager">Connection source.</param>
+            <param name="connectionId">Connection ID to lock on.</param>
+            <param name="timeoutSeconds">How long to wait for the lock before giving up. Default 30s.</param>
+            <param name="lockName">Advisory lock name. Defaults to <see cref="F:CL.MySQL2.Services.SchemaSyncLock.LockName"/>.</param>
+            <param name="logger">Optional logger.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:CL.MySQL2.Services.SchemaSyncLock.DisposeAsync">
+            <summary>Releases the advisory lock (if held) and closes the dedicated connection.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SmartCachePool">
+            <summary>
+            A named group of cached queries that is kept warm by a background timer.
+            Queries opt in via <c>.SmartCache("poolName")</c>; on first execution they
+            register their refresh factory with the pool. Every <see cref="P:CL.MySQL2.Services.SmartCachePool.RefreshEvery"/>
+            the pool re-runs every registered factory and overwrites the cache entry,
+            so subsequent reads never block on the DB. Entries stay warm forever once
+            registered — the pool never evicts them.
+            </summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.SmartCachePool.Name">
+            <summary>Pool name used by <c>.SmartCache(name)</c>. Case-insensitive.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.SmartCachePool.RefreshEvery">
+            <summary>How often the pool re-runs every registered factory.</summary>
+        </member>
+        <member name="P:CL.MySQL2.Services.SmartCachePool.MaxIdleFires">
+            <summary>Drop an entry after this many consecutive refresh ticks with no read. Default 10.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePool.WarmUp(System.Func{System.Threading.Tasks.Task})">
+            <summary>
+            Runs <paramref name="warmUp"/> as a fire-and-forget task so the pool's
+            hot queries are populated before any user request hits them. Inside
+            <paramref name="warmUp"/>, just call the queries that should be warm
+            (with their normal <c>.SmartCache(...)</c> decoration) — they
+            auto-register with this pool as they always do.
+            <para>
+            Exceptions are caught and logged so a slow or broken warm-up never
+            crashes startup. The pool stays lazy if the warm-up fails: queries
+            still register on their first real read.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePool.RegisterOrTouch(System.String,System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.Object},System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{System.Object}})">
+            <summary>
+            Registers a query in the pool's refresh list, or touches the existing
+            entry's last-read timestamp + resets its idle counter. Called from
+            terminal methods on the query builder when <c>.SmartCache(...)</c> is set.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePool.RefreshNowAsync(System.Threading.CancellationToken)">
+            <summary>
+            Runs every registered factory once. Public so callers can warm the
+            pool on startup (or trigger an out-of-schedule refresh after a deploy).
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePool.HasEntriesForTable(System.String)">
+            <summary>
+            Returns <c>true</c> if this pool has any active refresh entries for the
+            given table name. Used to suppress mutation-triggered cache invalidation
+            for tables whose freshness is managed by the pool's background refresh.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePool.GetStats">
+            <summary>Snapshot of pool stats for diagnostics.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePool.Touch(System.String,System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Marks a touched entry to reset its idle counter. Called by the
+            query builder on every cache hit so an actively-read entry never
+            drifts toward eviction.
+            </summary>
+        </member>
+        <member name="F:CL.MySQL2.Services.SmartCachePool.PoolEntry.LastCacheKey">
+            <summary>
+            Most recent cache key written by this entry's refresh tick.
+            Used to evict orphans when the table-version bumps between
+            ticks: tick N writes to key V<sub>N</sub>, a mutation bumps the
+            version, tick N+1 writes to V<sub>N+1</sub> — we evict V<sub>N</sub>
+            in the same tick so it doesn't linger in the cache store.
+            </summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SmartCachePoolStats">
+            <summary>Diagnostic snapshot of a pool's state.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolStats.#ctor(System.String,System.TimeSpan,System.Int32,System.Int32,System.Int64,System.Int64,System.DateTime)">
+            <summary>Diagnostic snapshot of a pool's state.</summary>
+        </member>
+        <member name="T:CL.MySQL2.Services.SmartCachePoolRegistry">
+            <summary>
+            Process-wide registry of named <see cref="T:CL.MySQL2.Services.SmartCachePool"/> instances.
+            Pools are declared once at app startup (typically in a plugin's
+            <c>OnInitializeAsync</c>) and referenced from queries by name.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolRegistry.Register(System.String,System.TimeSpan,System.Int32,System.Func{System.Threading.Tasks.Task})">
+            <summary>
+            Registers and starts a new pool. If a pool with the same name already
+            exists it is returned unchanged (idempotent on plugin reloads).
+            <para>
+            When <paramref name="warmUp"/> is supplied the pool runs it once as
+            a fire-and-forget task so its hot queries are populated before the
+            first user request. Inside <paramref name="warmUp"/>, just call the
+            queries that should be warm — they auto-register with the pool via
+            their normal <c>.SmartCache(name)</c> decoration. The warm-up is
+            skipped on a repeat registration of an existing pool.
+            </para>
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolRegistry.Get(System.String)">
+            <summary>Returns the pool with the given name, or <c>null</c> if not registered.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolRegistry.HasEntriesForTable(System.String)">
+            <summary>
+            Returns <c>true</c> if any registered pool currently has refresh entries
+            for the given table name. Used by <see cref="M:CL.MySQL2.Services.QueryCache.Invalidate(System.String)"/> to
+            skip mutation-triggered eviction for tables that are kept warm by a pool's
+            background refresh loop.
+            </summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolRegistry.RefreshNowAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Triggers an out-of-schedule refresh for the named pool.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolRegistry.GetStats">
+            <summary>Diagnostic snapshot of every registered pool.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.SmartCachePoolRegistry.DisposeAllAsync">
+            <summary>Stops and disposes every pool. Called by the library on shutdown.</summary>
         </member>
         <member name="T:CL.MySQL2.Services.TableSyncService">
             <summary>
@@ -776,11 +2548,16 @@
             Uses <see cref="T:CL.MySQL2.Core.SchemaAnalyzer"/> to detect and apply CREATE/ALTER TABLE statements.
             </summary>
         </member>
-        <member name="M:CL.MySQL2.Services.TableSyncService.#ctor(CL.MySQL2.Services.ConnectionManager,System.String,CodeLogic.Core.Logging.ILogger,CodeLogic.Core.Events.IEventBus)">
+        <member name="M:CL.MySQL2.Services.TableSyncService.#ctor(CL.MySQL2.Services.ConnectionManager,System.String,CodeLogic.Core.Logging.ILogger,CodeLogic.Core.Events.IEventBus,System.Func{System.String,CL.MySQL2.Configuration.MySqlDatabaseConfig})">
             <param name="connectionManager">The connection manager to use for database access.</param>
             <param name="dataDirectory">Base data directory (for backup and migration storage).</param>
             <param name="logger">Optional logger.</param>
             <param name="events">Optional event bus for publishing sync events.</param>
+            <param name="configLookup">
+            Optional delegate resolving per-connection config so the service can read
+            <see cref="P:CL.MySQL2.Configuration.MySqlDatabaseConfig.SchemaSyncLevel"/>. When null, sync operates at
+            <see cref="F:CL.MySQL2.Models.SchemaSyncLevel.Safe"/>.
+            </param>
         </member>
         <member name="M:CL.MySQL2.Services.TableSyncService.SyncTableAsync``1(System.Boolean,System.String,System.Threading.CancellationToken)">
             <summary>
@@ -791,9 +2568,19 @@
             <param name="connectionId">The connection ID to use.</param>
             <param name="ct">Cancellation token.</param>
         </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.SyncTableCoreAsync(System.Type,System.Boolean,System.String,System.Threading.CancellationToken,System.Boolean)">
+            <summary>
+            Non-generic core used by both the typed <see cref="M:CL.MySQL2.Services.TableSyncService.SyncTableAsync``1(System.Boolean,System.String,System.Threading.CancellationToken)"/> and
+            <see cref="M:CL.MySQL2.Services.TableSyncService.SyncTablesAsync(System.Collections.Generic.IEnumerable{System.Type},System.Boolean,System.String,System.Threading.CancellationToken)"/>. Avoids per-type <c>MakeGenericMethod.Invoke</c>
+            reflection.
+            </summary>
+        </member>
         <member name="M:CL.MySQL2.Services.TableSyncService.SyncTablesAsync(System.Collections.Generic.IEnumerable{System.Type},System.Boolean,System.String,System.Threading.CancellationToken)">
             <summary>
-            Synchronizes multiple entity types and returns a dictionary of results.
+            Synchronizes multiple entity types as one pass. Brackets the whole pass in a single
+            cross-node <see cref="T:CL.MySQL2.Services.SchemaSyncLock"/>, applies the CRC fast-path per table, and — in
+            <see cref="F:CL.MySQL2.Models.SyncMode.Migration"/> — emits the "already current, switch back to Production"
+            warning when nothing needed doing.
             </summary>
             <param name="entityTypes">Entity types to sync.</param>
             <param name="createBackup">Whether to back up schemas before altering.</param>
@@ -802,6 +2589,9 @@
         </member>
         <member name="M:CL.MySQL2.Services.TableSyncService.GetMigrationTracker">
             <summary>Returns the <see cref="T:CL.MySQL2.Services.MigrationTracker"/> used by this service.</summary>
+        </member>
+        <member name="M:CL.MySQL2.Services.TableSyncService.GetSchemaStateStore">
+            <summary>Returns the <see cref="T:CL.MySQL2.Services.SchemaStateStore"/> (the <c>__schema_state</c> sentinel).</summary>
         </member>
         <member name="M:CL.MySQL2.Services.TableSyncService.GetBackupManager">
             <summary>Returns the <see cref="T:CL.MySQL2.Services.BackupManager"/> used by this service.</summary>
@@ -837,6 +2627,14 @@
         <member name="M:CL.MySQL2.Services.TransactionScope.DisposeAsync">
             <summary>
             Disposes the transaction. Automatically rolls back if not already committed/rolled back.
+            </summary>
+        </member>
+        <member name="F:CL.Internal.InternalLibraryVersion.Current">
+            <summary>
+            The current assembly's informational version (e.g. "4.0.2"), with any
+            "+sha" build-metadata suffix stripped. Falls back to "0.0.0" only if
+            the attribute is genuinely missing — which would mean the build pipeline
+            is broken, not something a caller should be papering over.
             </summary>
         </member>
     </members>

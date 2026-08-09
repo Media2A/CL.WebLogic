@@ -96,12 +96,12 @@ static bool EnsureSampleDatabaseConfigs()
     var frameworkRoot = Path.Combine(AppContext.BaseDirectory, "data", "codelogic", "Libraries");
     var mySqlDir = Path.Combine(frameworkRoot, "CL.MySQL2");
     var webLogicDir = Path.Combine(frameworkRoot, "CL.WebLogic");
-    var storageS3Dir = Path.Combine(frameworkRoot, "CL.StorageS3");
+    var storageDir = Path.Combine(frameworkRoot, "CL.Storage");
     var gitHelperDir = Path.Combine(frameworkRoot, "CL.GitHelper");
     var netUtilsDir = Path.Combine(frameworkRoot, "CL.NetUtils");
     Directory.CreateDirectory(mySqlDir);
     Directory.CreateDirectory(webLogicDir);
-    Directory.CreateDirectory(storageS3Dir);
+    Directory.CreateDirectory(storageDir);
     Directory.CreateDirectory(gitHelperDir);
     Directory.CreateDirectory(netUtilsDir);
 
@@ -136,7 +136,7 @@ static bool EnsureSampleDatabaseConfigs()
     };
 
     var webLogicConfigPath = Path.Combine(webLogicDir, "config.weblogic.json");
-    var storageS3ConfigPath = Path.Combine(storageS3Dir, "config.storages3.json");
+    var storageConfigPath = Path.Combine(storageDir, "config.storage.json");
     var gitHelperConfigPath = Path.Combine(gitHelperDir, "config.githelper.json");
     var netUtilsConfigPath = Path.Combine(netUtilsDir, "config.netutils.json");
     Dictionary<string, object?> webLogicConfig;
@@ -162,10 +162,10 @@ static bool EnsureSampleDatabaseConfigs()
 
     File.WriteAllText(mySqlConfigPath, JsonSerializer.Serialize(mySqlConfig, new JsonSerializerOptions { WriteIndented = true }));
     File.WriteAllText(webLogicConfigPath, JsonSerializer.Serialize(webLogicConfig, new JsonSerializerOptions { WriteIndented = true }));
-    File.WriteAllText(storageS3ConfigPath, JsonSerializer.Serialize(new
+    File.WriteAllText(storageConfigPath, JsonSerializer.Serialize(new
     {
         enabled = false,
-        connections = Array.Empty<object>()
+        defaultConnection = "Default"
     }, new JsonSerializerOptions { WriteIndented = true }));
     File.WriteAllText(gitHelperConfigPath, JsonSerializer.Serialize(new
     {

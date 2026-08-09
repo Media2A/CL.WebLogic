@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. Going forward, versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Breaking storage migration.
+
+### Changed
+- Replaced the legacy `CodeLogic.StorageS3` dependency with provider-neutral `CodeLogic.Storage`.
+- `WebLogicBootstrapOptions.IncludeStorage` now loads `StorageLibrary`.
+- Remote theme reads use a mounted storage connection and a relative path prefix; bucket/container selection belongs to the connection configuration.
+- `WebStorageMode.Storage` replaces the S3-specific mode.
+
+### Removed (breaking)
+- `IncludeStorageS3`, `WebStorageMode.S3`, `S3ConnectionId`, `S3Bucket`, and `S3Prefix`.
+- Checked-in MiniBlog copies and manifests for the legacy `CL.StorageS3` library.
+
 ## [0.3.0] - 2026-05-08
 
 Two-layer output caching. Additive — no breaking changes.
