@@ -55,7 +55,7 @@ jobs:
         run: docfx CL.WebLogic/docs/docfx.json
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: CL.WebLogic/docs-output
 
